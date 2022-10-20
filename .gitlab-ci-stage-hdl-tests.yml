@@ -1,0 +1,29 @@
+.hdl-test-job-default-config:
+  stage: hdl-tests
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH != "master"'
+  tags: [vivado]
+
+cocotb-tests-highspeedin:
+  extends: .hdl-test-job-default-config
+  script:
+    # Generate HDL sources
+    - make gen_srcs
+    # Run the tests
+    - pushd ./test
+    # Install the required Python dependencies in a venv
+    - python3 -m venv ./hdltestenv
+    - source ./hdltestenv/bin/activate
+    - pip3 install -r ./requirements.txt
+    # Leaving running the actual tests up to pytest
+    - pytest -s -o log_cli=True
+    - popd
+  artifacts:
+    # Collect the generated waveforms and test reports for later
+    # analysis, in case a test fails:
+    paths:
+      - ./test/sim_build
+    # Keeping them for a day should be more than sufficient to analyze
+    # the root cause of job failures:
+    expire_in: 1 day
+

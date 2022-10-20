@@ -1,0 +1,14 @@
+.DS_Store
+.idea
+*.log
+tmp/
+
+build/**
+!build/Makefile
+!build/scripts/**
+!build/constr/
+!build/constr/*
+!build/scripts/
+!build/scripts/*
+
+gen_srcs

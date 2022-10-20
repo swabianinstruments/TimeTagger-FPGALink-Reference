@@ -1,0 +1,13 @@
+attrs==21.4.0
+cocotb==1.6.2
+cocotb-bus==0.2.1
+git+https://github.com/themperek/cocotb-test.git@ece092446a1e5d#egg=cocotb-test
+cocotbext-axi==0.1.18
+cocotbext-eth==0.1.18
+iniconfig==1.1.1
+packaging==21.3
+pluggy==1.0.0
+py==1.11.0
+pyparsing==3.0.9
+pytest==7.1.2
+tomli==2.0.1
