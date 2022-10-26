@@ -7,11 +7,3 @@ stages:
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
-# Prevent duplicate pipelines
-# https://docs.gitlab.com/ee/ci/yaml/#prevent-duplicate-pipelines
-# Basically do not create a extra pipeline for merge request
-workflow:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      when: never
-    - when: always
