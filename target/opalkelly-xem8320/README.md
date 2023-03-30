@@ -169,3 +169,15 @@ The tag time difference detector contains the following registers:
 |      12 | lower_bound         | The lower bound of the expected interval (default: 0x19000)                           |
 |      16 | upper_bound         | The upper bound of the expected interval (default: 0x20000)                           |
 |      20 | failed_time         | The failing time in 1/3 ps. The upper bit is set if the value is valid                |
+
+## Building your own design
+
+To modify this reference design for your own purposes, please take a look at
+`hdl/user_sample.sv` in the top level directory.
+
+The incoming data is converted with the `si_tag_converter` module, that
+computes the `tagtime` in 1/3 ps, the channel and the rising/falling edge for
+each event. The output should only be sampled if `valid tag` is set.
+
+The code below the `si_tag_converter` module instantiation is part of the sample
+design and can be removed if so desired.
