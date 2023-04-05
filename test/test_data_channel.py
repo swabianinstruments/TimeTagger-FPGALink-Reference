@@ -49,7 +49,7 @@ async def data_channel_testbench(dut, packets=[]):
     packet_contents = [
         {
             "wrap_count": rng.getrandbits(32),
-            "tags": [gen_tag(rng.getrandbits(12), rng.getrandbits(12), rng.getrandbits(6)) for i in range((rng.randrange(20) + 1) * 8)], # Ensure only 256 bit words are sent
+            "tags": [gen_tag(rng.getrandbits(12), rng.getrandbits(12), rng.getrandbits(6)) for i in range((rng.randrange(20) + 1) * 4)], # Ensure only 128 bit words are sent
         } for i in range(20)
     ]
     # send sucessive packets

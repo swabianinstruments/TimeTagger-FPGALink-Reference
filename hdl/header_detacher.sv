@@ -6,7 +6,7 @@
 // Namely, throwing away the first 256 bit word
 module si_header_detacher
   #(
-    parameter DATA_WIDTH = 256,
+    parameter DATA_WIDTH = 128,
     parameter KEEP_WIDTH = (DATA_WIDTH + 7) / 8
     ) (
        input wire                    clk,
@@ -29,8 +29,8 @@ module si_header_detacher
       // Some sanity checks:
 
       // - ensure that the data-width is 256 bits, this is the only width supported by this module
-      if (DATA_WIDTH != 256) begin
-         $error("Error: data-width needs to be 256 bits");
+      if (DATA_WIDTH != 128) begin
+         $error("Error: data-width needs to be 128 bits");
          $finish;
       end
    end

@@ -1,5 +1,5 @@
-# AXI4-Stream Ethernet FCS checker for 256-bit Words cocotb-Tests
-# 
+# AXI4-Stream Ethernet FCS checker for 128-bit Words cocotb-Tests
+#
 # This file is part of the Time Tagger software defined digital data
 # acquisition FPGA-link reference design.
 #
@@ -58,8 +58,8 @@ async def axis_fcs_checker_testbench(dut, packets=[]):
     valid_packets = []
 
     for _ in range(10):
-        # The packets need to have a length % 256 = 0
-        packet = rng.randbytes(32 + 32 * rng.randrange(9))
+        # The packets need to have a length % 128 = 0
+        packet = rng.randbytes(16 + 16 * rng.randrange(9))
         zlib_fcs = zlib.crc32(packet)
 
         if rng.randrange(2) == 1:
@@ -128,11 +128,11 @@ async def axis_fcs_checker_testbench(dut, packets=[]):
 
     for vp, rp in zip(valid_packets, recv_packets):
         assert len(vp) == len(rp)
-        for (vb, rb) in zip(vp, rp):
+        for vb, rb in zip(vp, rp):
             assert vb == rb
 
 
-def test_axis_fcs_checker_256b():
+def test_axis_fcs_checker_128b():
     tests_dir = Path(__file__).parent
     top_dir = tests_dir.parent
     hdl_dir = top_dir / "hdl"
@@ -140,11 +140,11 @@ def test_axis_fcs_checker_256b():
     axis_rtl_dir = top_dir / "3rdparty" / "verilog-ethernet" / "lib" / "axis" / "rtl"
 
     misc.cocotb_test(
-        dut="eth_axis_fcs_checker_256b",
+        dut="eth_axis_fcs_checker_128b",
         test_module=Path(__file__).stem,
         verilog_sources=[
-            hdl_dir / "eth_axis_fcs_checker_256b.sv",
-            gen_srcs_dir / "eth_crc_256b_comb.v",
+            hdl_dir / "eth_axis_fcs_checker_128b.sv",
+            gen_srcs_dir / "eth_crc_128b_comb.v",
             axis_rtl_dir / "axis_fifo.v",
         ],
     )

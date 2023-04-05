@@ -35,7 +35,7 @@ class Statistics:
             "val_addr": 16,
             "div": 1,
             "signed": False,
-            "unit": "Words (256 bit)/s",
+            "unit": "Words (128 bit)/s",
         },
         "received_packets": {
             "val_addr": 20,
@@ -47,13 +47,13 @@ class Statistics:
             "val_addr": 24,
             "div": 1,
             "signed": False,
-            "unit": "Words (256 bit)",
+            "unit": "Words (128 bit)",
         },
         "size_of_last_packet": {
             "val_addr": 28,
             "div": 1,
             "signed": False,
-            "unit": "Words (256 bit)/Packet",
+            "unit": "Words (128 bit)/Packet",
         },
         "packet_loss": {
             "val_addr": 32,

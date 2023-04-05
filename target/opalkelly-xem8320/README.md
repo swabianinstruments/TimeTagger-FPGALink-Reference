@@ -110,10 +110,10 @@ Connected to device Opal Kelly XEM8320 with serial 0123456789!
 Diagnostics:
                                                           VAL
   packet_rate                          (Packets/s) :   183095
-  word_rate                    (Words (256 bit)/s) :   549285
+  word_rate                    (Words (128 bit)/s) :   549285
   received_packets                       (Packets) :   876845
-  received_words                 (Words (256 bit)) :  2630819
-  size_of_last_packet     (Words (256 bit)/Packet) :        3
+  received_words                 (Words (128 bit)) :  2630819
+  size_of_last_packet     (Words (128 bit)/Packet) :        3
   packet_loss                               (bool) :        0
   invalid_packets                        (Packets) :        0
 si@ubuntu:target/opalkelly-xem8350/host$ popd

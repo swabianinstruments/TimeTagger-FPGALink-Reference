@@ -239,11 +239,11 @@ module xem8320_reference (
 
    wire         wide_rx_data_tready;
    wire         wide_rx_data_tvalid;
-   wire [255:0] wide_rx_data_tdata;
+   wire [127:0] wide_rx_data_tdata;
    wire         wide_rx_data_tlast;
-   wire [31:0]  wide_rx_data_tkeep;
+   wire [15:0]  wide_rx_data_tkeep;
 
-   axis_adapter #(.S_DATA_WIDTH(64), .M_DATA_WIDTH(256), .USER_ENABLE(0)) adapter
+   axis_adapter #(.S_DATA_WIDTH(64), .M_DATA_WIDTH(128), .USER_ENABLE(0)) adapter
      (
         .clk(sfpp1_eth_10g_axis_rx_clk),
         .rst(sfpp1_eth_10g_axis_rx_rst),
@@ -264,11 +264,11 @@ module xem8320_reference (
 
    wire         data_stream_tready;
    wire         data_stream_tvalid;
-   wire [255:0] data_stream_tdata;
+   wire [127:0] data_stream_tdata;
    wire         data_stream_tlast;
-   wire [31:0]  data_stream_tkeep;
+   wire [15:0]  data_stream_tkeep;
 
-   eth_axis_fcs_checker_256b
+   eth_axis_fcs_checker_128b
      (
       .clk(sfpp1_eth_10g_axis_rx_clk),
       .rst(sfpp1_eth_10g_axis_rx_rst),
@@ -293,7 +293,7 @@ module xem8320_reference (
    wire [3:0]   tag_stream_tkeep;
    wire [31:0]  tag_stream_tuser; // Contains wrap count
 
-   si_data_channel #(.DATA_WIDTH_IN(256), .DATA_WIDTH_OUT(32), .STATISTICS(1)) data_channel
+   si_data_channel #(.DATA_WIDTH_IN(128), .DATA_WIDTH_OUT(32), .STATISTICS(1)) data_channel
      (
       .eth_clk(sfpp1_eth_10g_axis_rx_clk),
       .eth_rst(sfpp1_eth_10g_axis_rx_rst),

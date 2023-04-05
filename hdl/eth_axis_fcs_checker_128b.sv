@@ -1,6 +1,6 @@
 /**
  * AXI4-Stream Ethernet Frame Check Sequence Checker for streams of
- * 256-bit data words.
+ * 128-bit data words.
  * 
  * This file is part of the Time Tagger software defined digital data
  * acquisition FPGA-link reference design.
@@ -21,7 +21,7 @@
 `default_nettype none
 
 // Checks the crc value of ethernet packets and removes it
-module eth_axis_fcs_checker_256b
+module eth_axis_fcs_checker_128b
   (
    input wire         clk,
    input wire         rst,
@@ -29,9 +29,9 @@ module eth_axis_fcs_checker_256b
    /*
     * AXI input
     */
-   input wire [255:0] s_axis_tdata,
+   input wire [127:0] s_axis_tdata,
    // tkeep is ignored in this module, input packet len % 32 byte == 4
-   input wire [31:0]  s_axis_tkeep,
+   input wire [15:0]  s_axis_tkeep,
    input wire         s_axis_tvalid,
    output wire        s_axis_tready,
    input wire         s_axis_tlast,
@@ -39,8 +39,8 @@ module eth_axis_fcs_checker_256b
    /*
     * AXI output
     */
-   output reg [255:0] m_axis_tdata,
-   output reg [31:0]  m_axis_tkeep = 32'hFFFFFFFF,
+   output reg [127:0] m_axis_tdata,
+   output reg [15:0]  m_axis_tkeep = 16'hFFFF,
    output reg         m_axis_tvalid,
    input wire         m_axis_tready,
    output reg         m_axis_tlast
@@ -55,11 +55,11 @@ module eth_axis_fcs_checker_256b
    // parse / optimize. Thus, when running in Verilator, replace it by some
    // stupid signal assignments such that linting still works. This will
    // cause Verilator-simulations to behave incorrectly. Should be fixable by
-   // resorting to the more generic and iteratively evaluated 256-bit
+   // resorting to the more generic and iteratively evaluated 128-bit
    // verilog-ethernet LFSR module?
 `ifndef VERILATOR
-   eth_crc_256b_comb
-     eth_crc_256b_comb_inst (
+   eth_crc_128b_comb
+     eth_crc_128b_comb_inst (
                              .state_in(fcs_state),
                              .data_in(s_axis_tdata),
                              .state_out(fcs_state_next));
@@ -86,7 +86,7 @@ module eth_axis_fcs_checker_256b
 
    // Small buffer to invalidate packet if needed & cut off last word (only containing crc value)
    // Always keep one data word here while a packet is received
-   reg [255:0] tdata;
+   reg [127:0] tdata;
    reg         valid;
    reg         fifo_valid;
    reg         last;
@@ -126,9 +126,10 @@ module eth_axis_fcs_checker_256b
    end
 
    // Small fifo to be able to drop packets if needed
-   // The smallest a blockram can get is 512 x 72, so use the whole size
+   // We need ~10000 bytes, so a depth of at least 612. Since block rams have at a depth of n * 512, go to a depth of 1024
+   //
    /* verilator lint_off PINMISSING*/
-   axis_fifo #(.DEPTH(512), .DATA_WIDTH(256), .KEEP_ENABLE(0), .FRAME_FIFO(1), .DROP_OVERSIZE_FRAME(1), .DROP_BAD_FRAME(1)) fifo
+   axis_fifo #(.DEPTH(1024), .DATA_WIDTH(128), .KEEP_ENABLE(0), .FRAME_FIFO(1), .DROP_OVERSIZE_FRAME(1), .DROP_BAD_FRAME(1)) fifo
      (
       .clk(clk),
       .rst(rst),

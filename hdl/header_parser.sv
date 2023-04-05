@@ -22,7 +22,7 @@
 // This module drops invalid packets & detects lost packets (which results in lost tags)
 module si_header_parser
   #(
-    parameter DATA_WIDTH = 256,
+    parameter DATA_WIDTH = 128,
     parameter KEEP_WIDTH = (DATA_WIDTH + 7) / 8
     ) (
        input wire                    clk,
@@ -55,9 +55,9 @@ module si_header_parser
    initial begin
       // Some sanity checks:
 
-      // - ensure that the data-width is 256 bits, this is the only width supported by this module
-      if (DATA_WIDTH != 256) begin
-         $error("Error: data-width needs to be 256 bits");
+      // - ensure that the data-width is 128 bits, this is the only width supported by this module
+      if (DATA_WIDTH != 128) begin
+         $error("Error: data-width needs to be 128 bits");
          $finish;
       end
    end
