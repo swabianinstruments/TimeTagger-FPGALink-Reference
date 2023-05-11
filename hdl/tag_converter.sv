@@ -2,10 +2,11 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-// This module parses tags to make it easier to process them
+// This module parses tags in the internal TimeTagger format to make it easier to process them
+
 // TODO Should be converted to axis interface
 module si_tag_converter
-  #(parameter CHANNEL_COUNT = 18)
+  #(parameter CHANNEL_COUNT = 20) // This is the internal channel count and should be kept at 20 for the TTX
    (
     input wire         clk,
     input wire         rst,
