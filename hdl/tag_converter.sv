@@ -15,8 +15,8 @@ module si_tag_converter
     input wire [31:0]  wrap_count,
 
     output wire        valid_tag,
-    // The time of the signal inside the clock cycle.
-    // In 1/3 ps
+    // The time the tag was captured at
+    // In 1/3 ps since the startup of the TTX
     output wire [63:0] tagtime,
     // The channel this event occured on
     output reg [4:0]   channel,
