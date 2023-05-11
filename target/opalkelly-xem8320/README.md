@@ -172,12 +172,15 @@ The tag time difference detector contains the following registers:
 
 ## Building your own design
 
+*The reference design and the on-the-wire format are not stable and will be subject to incompatible changes with further development*
+
 To modify this reference design for your own purposes, please take a look at
 `hdl/user_sample.sv` in the top level directory.
 
 The incoming data is converted with the `si_tag_converter` module, that
 computes the `tagtime` in 1/3 ps, the channel and the rising/falling edge for
-each event. The output should only be sampled if `valid tag` is set.
+each event. The output should only be sampled if `valid_tag` is set.
 
 The code below the `si_tag_converter` module instantiation is part of the sample
-design and can be removed if so desired.
+design and can be removed if so desired. Avoid modifying the rest of the
+reference design as much as possible so future changes can be easily incorporated.
