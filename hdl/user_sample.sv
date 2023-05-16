@@ -87,7 +87,8 @@ module user_sample
    reg [63:0] tagtime;
    wire       valid_tag;
 
-   si_tag_converter #(.CHANNEL_COUNT(20)) converter
+   // This module adapts the internal TimeTagger format and should not be modified
+   si_tag_converter converter
      (
       .clk(clk),
       .rst(rst),
@@ -206,8 +207,6 @@ module user_sample
          channel_select_wb <= 0;
          lower_bound_wb <= 32'h00190000;
          upper_bound_wb <= 32'h00200000;
-
-         // TODO
       end else if (wb_cyc_i && wb_stb_i) begin
          wb_ack_o <= 1;
          if (wb_we_i) begin
