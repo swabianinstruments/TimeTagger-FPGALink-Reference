@@ -19,6 +19,7 @@ module si_tag_converter
     // In 1/3 ps since the startup of the TTX
     output wire [63:0] tagtime,
     // The channel this event occured on
+    // Starts at 0 while the actual channel numbering starts with 1! (if 'channel' is 2, it's actually the channel number 3)
     output reg [4:0]   channel,
     output reg         rising_edge // 1 on rising edge, 0 on falling edge
     );

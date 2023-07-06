@@ -17,8 +17,20 @@ Only insert or remove modules when power to the platform is turned off.
 Building this project requires a recent Version of Vivado. The chip is
 included in the Standard Edition, so no paid Vivado-license is required. The
 project has been tested to work with Vivado 2022.2 on an Ubuntu 20.04
-Workstation installation.  Assuming Vivado and all required tools are installed,
-the Xilinx Vivado project can be created by running:
+Workstation installation. First up, generate some verilog sources by executing `make` in the root directory like so:
+
+``` sh
+si@ubuntu:$ make
+mkdir -p gen_srcs/
+python3 -m venv gen_srcs/pyenv/
+
+[... output suppressed ...]
+
+Successfully installed bitarray-2.5.1 galois-0.0.29 llvmlite-0.38.1 numba-0.55.2 numpy-1.21.6 typing-extensions-4.2.0
+```
+
+Assuming Vivado and all required tools are installed,
+the Xilinx Vivado project can then be created by running:
 
 ```
 si@ubuntu:target/opalkelly-xem8320$ make project
@@ -59,7 +71,12 @@ si@ubuntu:target/opalkelly-xem8320$ python3
 0
 ```
 
-To use the SFP+ modules and the onboard LEDs, the [VIO1](https://docs.opalkelly.com/xem8320/leds/) & [VIO2](https://docs.opalkelly.com/xem8320/gigabit-transceivers/) voltage need to be enabled without a connected SYZYGY module, . This project includes a script to configure the voltage rails accordingly in SmartVIO hybrid mode. This script must be executed from within the `host` subdirectory, as illustrated below:
+To use the SFP+ modules and the onboard LEDs, the
+[VIO1](https://docs.opalkelly.com/xem8320/leds/) &
+[VIO2](https://docs.opalkelly.com/xem8320/gigabit-transceivers/) voltages need to
+be enabled without a SYZYGY module connected. This project includes a script to
+configure the voltage rails accordingly in SmartVIO hybrid mode. This script
+must be executed from within the `host` subdirectory, as illustrated below:
 
 ``` sh
 si@ubuntu:target/opalkelly-xem8350$ pushd host
@@ -178,7 +195,7 @@ To modify this reference design for your own purposes, please take a look at
 `hdl/user_sample.sv` in the top level directory.
 
 The incoming data is converted with the `si_tag_converter` module, that
-computes the `tagtime` in 1/3 ps, the channel and the rising/falling edge for
+computes the `tagtime` in 1/3 ps, the channel (zero indexed) and the rising/falling edge for
 each event. The output should only be sampled if `valid_tag` is set.
 
 The code below the `si_tag_converter` module instantiation is part of the sample

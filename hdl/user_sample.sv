@@ -163,7 +163,6 @@ module user_sample
 
    reg         valid_tag_p;
    reg [4:0]   channel_p;
-   reg         valid_tag_p;
    reg [63:0]  prev_tagtime;
    reg [63:0]  tagtime_diff;
    reg         init;
