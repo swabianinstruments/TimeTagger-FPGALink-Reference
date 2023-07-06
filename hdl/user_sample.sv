@@ -44,62 +44,34 @@
 //
 // Note: You can replicate much of this functionality with the Vivado ILA and adding multiple ANDed triggers with comparators
 module user_sample
-  #(
-    parameter DATA_WIDTH = 32,
-    parameter KEEP_WIDTH = (DATA_WIDTH + 7) / 8)
    (
-    input wire                  clk,
-    input wire                  rst,
+    input wire        clk,
+    input wire        rst,
 
-    // AXI-Stream 4 slave
-    input wire                  s_axis_tvalid, // tdata, tlast, tkeep and tuser are only valid if tvalid & tready are asserted in the same cycle
-    output reg                  s_axis_tready, // Set this output if your module is able to accept new data. WARNING: If this is disabled for a long time, data may be lost
-    input wire [DATA_WIDTH-1:0] s_axis_tdata, // This contains the tag data
-    input wire                  s_axis_tlast, // last is asserted in the last tag in every packet. tuser may only change after last was asserted
-    input wire [KEEP_WIDTH-1:0] s_axis_tkeep, // Should always be 0b1111
-    input wire [31:0]           s_axis_tuser, // Contains the upper bits of `counter`, wraps approx. every 6 hours
+    // Tag Input
+    // High if the current tag is valid and should actually be sampled
+    input wire        valid_tag,
+    // The time the tag was captured at
+    // In 1/3 ps since the startup of the TTX
+    input wire [63:0] tagtime,
+    // The channel this event occured on
+    // Starts at 0 while the actual channel numbering starts with 1! (if 'channel' is 2, it's actually the channel number 3)
+    input wire [4:0]  channel,
+    // 1 on rising edge, 0 on falling edge
+    input wire        rising_edge,
 
     // Wishbone interface for control & status
-    input wire                  wb_clk,
-    input wire                  wb_rst,
-    input wire [7:0]            wb_adr_i,
-    input wire [31:0]           wb_dat_i,
-    input wire                  wb_we_i,
-    input wire                  wb_stb_i,
-    input wire                  wb_cyc_i,
-    output reg [31:0]           wb_dat_o = 0,
-    output reg                  wb_ack_o,
+    input wire        wb_clk,
+    input wire        wb_rst,
+    input wire [7:0]  wb_adr_i,
+    input wire [31:0] wb_dat_i,
+    input wire        wb_we_i,
+    input wire        wb_stb_i,
+    input wire        wb_cyc_i,
+    output reg [31:0] wb_dat_o = 0,
+    output reg        wb_ack_o,
 
-    output reg [5:0]            led);
-   initial begin
-      // Some sanity checks:
-
-      // - ensure that the data-width is 32 bits, this is the only width supported by this module
-      if (DATA_WIDTH != 32) begin
-         $error("Error: data-width needs to be 32 bits");
-         $finish;
-      end
-   end
-   assign s_axis_tready = 1;
-
-   wire [4:0] channel;
-   wire       rising_edge;
-   reg [63:0] tagtime;
-   wire       valid_tag;
-
-   // This module adapts the internal TimeTagger format and should not be modified
-   si_tag_converter converter
-     (
-      .clk(clk),
-      .rst(rst),
-      .tag((s_axis_tvalid && s_axis_tready) ? s_axis_tdata : 0),
-      .wrap_count(s_axis_tuser),
-      .tagtime(tagtime),
-      .valid_tag(valid_tag),
-      .channel(channel),
-      .rising_edge(rising_edge)
-      );
-
+    output reg [5:0]  led);
 
    reg [15:0] tag_counter;
 

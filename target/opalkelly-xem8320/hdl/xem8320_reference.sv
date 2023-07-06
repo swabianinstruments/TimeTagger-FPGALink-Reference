@@ -325,17 +325,35 @@ module xem8320_reference (
       .wb_ack_o(wb.slave_ack_o[3])
       );
 
-   user_sample  #(.DATA_WIDTH(32)) user_design
+   wire [4:0]  channel;
+   wire        rising_edge;
+   wire [63:0] tagtime;
+   wire        valid_tag;
+
+   // Adapt from axi stream since the following modules don't it
+   assign tag_stream_tready = 1;
+   si_tag_converter converter
+     (
+      .clk(sfpp1_eth_10g_axis_rx_clk),
+      .rst(sfpp1_eth_10g_axis_rx_rst),
+      .tag((tag_stream_tvalid && tag_stream_tready) ? tag_stream_tdata : 0),
+      .wrap_count(tag_stream_tuser),
+
+      .valid_tag(valid_tag),
+      .tagtime(tagtime),
+      .channel(channel),
+      .rising_edge(rising_edge)
+      );
+
+   user_sample user_design
      (
       .clk(sfpp1_eth_10g_axis_rx_clk),
       .rst(sfpp1_eth_10g_axis_rx_rst),
 
-      .s_axis_tready(tag_stream_tready),
-      .s_axis_tvalid(tag_stream_tvalid),
-      .s_axis_tdata(tag_stream_tdata),
-      .s_axis_tlast(tag_stream_tlast),
-      .s_axis_tkeep(tag_stream_tkeep),
-      .s_axis_tuser(tag_stream_tuser),
+      .valid_tag(valid_tag),
+      .tagtime(tagtime),
+      .channel(channel),
+      .rising_edge(rising_edge),
 
       .wb_clk(okClk),
       .wb_rst(okRst),
