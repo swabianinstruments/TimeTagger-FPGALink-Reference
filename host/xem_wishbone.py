@@ -78,7 +78,7 @@ class XEMWishbone():
 
             for i, t in enumerate(chunked_txns):
                 if t.read_write == WishboneRW.Read:
-                    t.read_val = int.from_bytes(data_out[(i*8)+0:(i*8)+3], byteorder="little")
+                    t.read_val = int.from_bytes(data_out[(i*8)+0:(i*8)+4], byteorder="little")
                 t.fulfilled = True
 
     def bulk_chunk_size(self):
