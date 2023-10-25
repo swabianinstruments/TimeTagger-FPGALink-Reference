@@ -29,7 +29,7 @@ We recommend using the OpalKelly XEM8320. Please follow the direction in the
 ## Roadmap
 
 This repository contains a work-in-progress, we're planning on implementing the following functionality:
-- A TTX ethernet mode, removing the bandwidth limit to USB speeds
+- A TTX ethernet mode, removing the bandwidth limit to USB speeds (will be added in the TT release 2.17.0)
 - Retransmission support for recovering from packet losses, storing partial packets in the attached DDR3 RAM
 - 40GBit ethernet receiver and transmitter
 - Internal TTX changes to support the full 40GBit bandwidth
