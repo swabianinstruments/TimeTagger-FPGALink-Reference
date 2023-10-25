@@ -39,7 +39,7 @@ set files [list \
  "[file normalize "$frontpanel_dir/okWireOut.v"]"\
  "[file normalize "$target_dir/hdl/xem8320_reference.sv"]"\
  "[file normalize "$target_dir/hdl/sfpp1_eth_10g_axis.sv"]"\
- "[file normalize "$origin_dir/hdl/eth_axis_fcs_checker_256b.sv"]"\
+ "[file normalize "$origin_dir/hdl/eth_axis_fcs_checker_128b.sv"]"\
  "[file normalize "$origin_dir/hdl/wb_interface.sv"]"\
  "[file normalize "$origin_dir/hdl/wb_pipe_bridge.sv"]"\
  "[file normalize "$origin_dir/hdl/xgmii_axis_bridge.sv"]"\
@@ -51,7 +51,7 @@ set files [list \
  "[file normalize "$origin_dir/hdl/user_sample.sv"]"\
  "[file normalize "$origin_dir/hdl/statistics_wb.sv"]"\
  "[file normalize "$origin_dir/hdl/tag_converter.sv"]"\
- "[file normalize "$origin_dir/gen_srcs/eth_crc_256b_comb.v"]"\
+ "[file normalize "$origin_dir/gen_srcs/eth_crc_128b_comb.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_rx.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_rx_if.v"]"\

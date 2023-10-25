@@ -19,7 +19,7 @@
 `default_nettype none
 module si_data_channel
   #(
-    parameter DATA_WIDTH_IN = 256,
+    parameter DATA_WIDTH_IN = 128,
     parameter KEEP_WIDTH_IN = (DATA_WIDTH_IN + 7) / 8,
     parameter DATA_WIDTH_OUT = 32,
     parameter KEEP_WIDTH_OUT = (DATA_WIDTH_OUT + 7) / 8,
@@ -70,9 +70,9 @@ module si_data_channel
 
       // Some sanity checks:
 
-      // - ensure that the input data-width is 256 bits, this is the only width supported by this module
-      if (DATA_WIDTH_IN != 256) begin
-         $error("Error: DATA_WIDTH_IN needs to be 256 bits");
+      // - ensure that the input data-width is 128 bits, this is the only width supported by this module
+      if (DATA_WIDTH_IN != 128) begin
+         $error("Error: DATA_WIDTH_IN needs to be 128 bits");
          $finish;
       end
       // - ensure that the output data-width is a multiple of 32 bits, to not split tags

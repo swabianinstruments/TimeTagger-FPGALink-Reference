@@ -4,10 +4,10 @@
  * This file is part of the Time Tagger software defined digital data
  * acquisition FPGA-link reference design.
  *
- * Copyright (C) 2022 Swabian Instruments, All Rights Reserved
+ * Copyright (C) 2022-2023 Swabian Instruments, All Rights Reserved
  *
  * Authors:
- * - 2022 David Sawatzke <david@swabianinstruments.com>
+ * - 2022-2023 David Sawatzke <david@swabianinstruments.com>
  *
  * This file is provided under the terms and conditions of the BSD 3-Clause
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -22,7 +22,7 @@
 // This module drops invalid packets & detects lost packets (which results in lost tags)
 module si_header_parser
   #(
-    parameter DATA_WIDTH = 256,
+    parameter DATA_WIDTH = 128,
     parameter KEEP_WIDTH = (DATA_WIDTH + 7) / 8
     ) (
        input wire                    clk,
@@ -34,6 +34,8 @@ module si_header_parser
        input wire                    s_axis_tlast,
        input wire [KEEP_WIDTH-1:0]   s_axis_tkeep,
 
+       // In case of a packet starting correctly, but changing to invalid midway through may only output one word
+       // `header_detacher` will then drop the rest
        output reg                    m_axis_tvalid,
        input wire                    m_axis_tready,
        output reg [DATA_WIDTH-1:0]   m_axis_tdata,
@@ -55,9 +57,9 @@ module si_header_parser
    initial begin
       // Some sanity checks:
 
-      // - ensure that the data-width is 256 bits, this is the only width supported by this module
-      if (DATA_WIDTH != 256) begin
-         $error("Error: data-width needs to be 256 bits");
+      // - ensure that the data-width is 128 bits, this is the only width supported by this module
+      if (DATA_WIDTH != 128) begin
+         $error("Error: data-width needs to be 128 bits");
          $finish;
       end
    end
@@ -66,7 +68,7 @@ module si_header_parser
    assign m_axis_tkeep = s_axis_tkeep;
    assign m_axis_tlast = s_axis_tlast;
 
-   reg packet_has_begun;
+   reg [1:0] packet_word_counter; // Count the first few words of the header
 
    reg valid_header;
    // Save state of valid_header here to determine what to do with the rest of the packet
@@ -78,31 +80,41 @@ module si_header_parser
 
    always @(posedge clk) begin
       if (rst) begin
-         packet_has_begun <= 0;
+         packet_word_counter <= 0;
          valid_packet <= 1;
          lost_packet <= 0;
          next_sequence <= 0;
-      end else if (packet_has_begun == 1) begin
-         if (s_axis_tvalid && s_axis_tready && s_axis_tlast) begin
-            packet_has_begun <= 0;
-            valid_packet <= 1;
+      end else if (packet_word_counter != 0) begin
+         if (s_axis_tvalid && s_axis_tready) begin
+            if ((packet_word_counter == 1)
+                && valid_header) begin
+               next_sequence <= s_axis_tdata[8 * 8 +: 4 * 8] + 1;
+
+               if ((next_sequence != s_axis_tdata[8 * 8 +: 4 * 8])
+                   && (next_sequence != 0)) begin
+                  lost_packet <= 1;
+               end
+
+               valid_packet <= valid_header;
+            end
+            if (packet_word_counter < 2) begin
+               packet_word_counter <= packet_word_counter + 1;
+            end
+            if (s_axis_tlast) begin
+               packet_word_counter <= 0;
+               valid_packet <= 1;
+            end
          end
       end else begin
          if (s_axis_tvalid && s_axis_tready && ~s_axis_tlast) begin
-            packet_has_begun <= 1;
+            packet_word_counter <= 1;
             valid_packet <= valid_header;
-            if (valid_header == 1) begin
-               if (((next_sequence) != s_axis_tdata[24 * 8 +: 4 * 8]) && (next_sequence != 0)) begin
-                  lost_packet <= 1;
-               end
-               next_sequence <= s_axis_tdata[24 * 8 +: 4 * 8] + 1;
-            end
          end
       end
    end
 
    always @(*) begin
-      if (packet_has_begun == 1) begin
+      if (packet_word_counter == 2) begin
          if (valid_packet == 1) begin
             m_axis_tvalid = s_axis_tvalid;
             s_axis_tready = m_axis_tready;
@@ -115,20 +127,31 @@ module si_header_parser
       end else begin
          if (s_axis_tvalid) begin
             // Check if header is valid
-            if ((s_axis_tkeep == 32'hFFFFFFFF) &&
-                (s_axis_tdata[12 * 8 +: 8 * 8] ==
+            if ((packet_word_counter == 0) && (s_axis_tkeep == 16'hFFFF) &&
+                (s_axis_tdata[12 * 8 +: 4 * 8] ==
                  {
-                  // Byte 19: Type
-                  8'h00,
-                  // Byte 18: Version
-                  8'h00,
-                  // Byte 14 - 17: MAGIC SEQUENCE ASCII "SITT"
-                  32'h54544953,
+                  // Byte 14 - 15: MAGIC SEQUENCE ASCII "SI"
+                  16'h4953,
                   // Byte 12 - 13: Ethertype (0x80FB: AppleTalk)
                   16'h9B80
                   })) begin
 
                // This is a valid packet, so pass it through
+               m_axis_tvalid = s_axis_tvalid;
+               s_axis_tready = m_axis_tready;
+
+               valid_header = 1;
+            end else if ((packet_word_counter == 1) && valid_packet && (s_axis_tkeep == 16'hFFFF) &&
+                (s_axis_tdata[0 * 8 +: 4 * 8] ==
+                 {
+                  // Byte 19: Type
+                  8'h00,
+                  // Byte 18: Version
+                  8'h00,
+                  // Byte 16 - 17: MAGIC SEQUENCE ASCII "TT"
+                  16'h5454
+                })) begin
+               // This is still a valid packet, so continue to pass it through
                m_axis_tvalid = s_axis_tvalid;
                s_axis_tready = m_axis_tready;
 
@@ -142,7 +165,6 @@ module si_header_parser
          end else begin
             s_axis_tready = m_axis_tready;
             // Do *not* set tvalid here, otherwise the data is not allowed to change anymore
-            // We may want to drop the packet here, so the data may change without the module after us latching the data
             m_axis_tvalid = 0;
             // This only matters for the invalid_packet output in this state
             valid_header = 1;

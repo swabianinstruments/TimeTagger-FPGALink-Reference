@@ -27,14 +27,14 @@
 // |       0 | Presence Indicator  | Reads one, for detecting presence of this module                                      |
 // |       4 | statistics_control  | None                                                                                  |
 // |      12 | packet_rate         | (Valid) Packets received over the last second. Updates every second.                  |
-// |      16 | word_rate           | Words (256 bit) in valid Packets received over the last second. Updates every second. |
+// |      16 | word_rate           | Words (128 bit) in valid Packets received over the last second. Updates every second. |
 // |      20 | received_packets    | Number of (valid) packets received in total                                           |
 // |      24 | received_words      | Number of words in valid packets received in total. Can wrap in a few minutes.        |
 // |      28 | size_of_last_packet | Number of Words in the last valid packet                                              |
 // |      32 | packet_loss         | If `1` indicates a lost packet                                                        |
 // |      36 | invalid_packets     | Invalid Packets received in total. Also counts (for example) ARP and similar.         |
 //
-// Note: All statistics include the header with a size of 256 bit. A word might only be partially used, this reduces "real" data rate
+// Note: All statistics include the header with a size of 128 bit. A word might only be partially used, this reduces "real" data rate
 module si_statistics_wb
   #(
     parameter ETH_CLK_FREQ = 156250000)
