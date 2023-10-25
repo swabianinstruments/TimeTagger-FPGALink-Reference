@@ -176,8 +176,8 @@ module user_sample
       if (wb_rst) begin
          wb_dat_o <= 0;
          channel_select_wb <= 0;
-         lower_bound_wb <= 32'h00190000;
-         upper_bound_wb <= 32'h00200000;
+         lower_bound_wb <= 32'h00330000;
+         upper_bound_wb <= 32'h00340000;
       end else if (wb_cyc_i && wb_stb_i) begin
          wb_ack_o <= 1;
          if (wb_we_i) begin

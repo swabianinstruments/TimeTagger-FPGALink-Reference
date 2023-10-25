@@ -183,8 +183,8 @@ The tag time difference detector contains the following registers:
 |       0 | Presence Indicator  | Reads one, for detecting presence of this module                                      |
 |       4 | user_control        | If a non-zero is written, the status is held in reset                                 |
 |       8 | channel_select      | Determines which channel to monitor (default: 0)                                      |
-|      12 | lower_bound         | The lower bound of the expected interval (default: 0x19000)                           |
-|      16 | upper_bound         | The upper bound of the expected interval (default: 0x20000)                           |
+|      12 | lower_bound         | The lower bound of the expected interval (default: 0x330000)                          |
+|      16 | upper_bound         | The upper bound of the expected interval (default: 0x340000)                          |
 |      20 | failed_time         | The failing time in 1/3 ps. The upper bit is set if the value is valid                |
 
 ## Building your own design
