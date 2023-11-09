@@ -1,5 +1,5 @@
 /**
- * XEM8320 Time Tagger FPGALink Reference Design Top-Level Module.
+ * XEM8320 QSFP Time Tagger FPGALink Reference Design Top-Level Module.
  * 
  * This file is part of the Time Tagger software defined digital data
  * acquisition FPGA-link reference design.
@@ -8,7 +8,7 @@
  *
  * Authors:
  * - 2022 Leon Schuermann <leon@swabianinstruments.com>
- * - 2022 David Sawatzke <david@swabianinstruments.com>
+ * - 2022-2023 David Sawatzke <david@swabianinstruments.com>
  *
  * This file is provided under the terms and conditions of the BSD 3-Clause
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -20,7 +20,7 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-module xem8320_reference (
+module xem8320_reference_qsfp (
     // OpalKelly USB Host Interface
     input wire [4:0]  okUH,
     output wire [2:0] okHU,
@@ -290,12 +290,12 @@ module xem8320_reference (
 
    wire         tag_stream_tready;
    wire         tag_stream_tvalid;
-   wire [31:0]  tag_stream_tdata;
+   wire [127:0] tag_stream_tdata;
    wire         tag_stream_tlast;
-   wire [3:0]   tag_stream_tkeep;
+   wire [15:0]  tag_stream_tkeep;
    wire [31:0]  tag_stream_tuser; // Contains wrap count
 
-   si_data_channel #(.DATA_WIDTH_IN(128), .DATA_WIDTH_OUT(32), .STATISTICS(1)) data_channel
+   si_data_channel #(.DATA_WIDTH_IN(128), .DATA_WIDTH_OUT(128), .STATISTICS(1)) data_channel
      (
       .eth_clk(sfpp1_eth_10g_axis_rx_clk),
       .eth_rst(sfpp1_eth_10g_axis_rx_rst),
@@ -327,35 +327,44 @@ module xem8320_reference (
       .wb_ack_o(wb.slave_ack_o[3])
       );
 
-   wire [4:0]  channel;
-   wire        rising_edge;
-   wire [63:0] tagtime;
-   wire        valid_tag;
+   wire [4:0]  channel [3:0];
+   wire        rising_edge [3:0];
+   wire [63:0] tagtime [3:0];
+   wire [3:0]  conv_stream_tkeep;
+   wire        conv_stream_tready;
+   wire        conv_stream_tvalid;
 
    // Adapt from axi stream since the following modules don't it
-   assign tag_stream_tready = 1;
-   si_tag_converter converter
+   si_tag_converter_wide converter
      (
       .clk(sfpp1_eth_10g_axis_rx_clk),
       .rst(sfpp1_eth_10g_axis_rx_rst),
-      .tag((tag_stream_tvalid && tag_stream_tready) ? tag_stream_tdata : 0),
-      .wrap_count(tag_stream_tuser),
+      .s_axis_tvalid(tag_stream_tvalid),
+      .s_axis_tready(tag_stream_tready),
+      .s_axis_tdata(tag_stream_tdata),
+      .s_axis_tlast(tag_stream_tlast),
+      .s_axis_tkeep(tag_stream_tkeep),
+      .s_axis_tuser(tag_stream_tuser),
 
-      .valid_tag(valid_tag),
-      .tagtime(tagtime),
-      .channel(channel),
-      .rising_edge(rising_edge)
+      .m_axis_tvalid(conv_stream_tvalid),
+      .m_axis_tready(conv_stream_tready),
+      .m_axis_tkeep(conv_stream_tkeep),
+      .m_axis_tagtime(tagtime),
+      .m_axis_channel(channel),
+      .m_axis_rising_edge(rising_edge)
       );
 
-   user_sample user_design
+   user_sample_wide user_design
      (
       .clk(sfpp1_eth_10g_axis_rx_clk),
       .rst(sfpp1_eth_10g_axis_rx_rst),
 
-      .valid_tag(valid_tag),
-      .tagtime(tagtime),
-      .channel(channel),
-      .rising_edge(rising_edge),
+      .s_axis_tvalid(conv_stream_tvalid),
+      .s_axis_tready(conv_stream_tready),
+      .s_axis_tkeep(conv_stream_tkeep),
+      .s_axis_channel(channel),
+      .s_axis_tagtime(tagtime),
+      .s_axis_rising_edge(rising_edge),
 
       .wb_clk(okClk),
       .wb_rst(okRst),
