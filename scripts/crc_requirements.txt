@@ -1,6 +1,4 @@
 bitarray==2.5.1
-galois==0.0.29
-llvmlite==0.38.1
-numba==0.55.2
-numpy==1.21.6
+galois==0.3.6
+numpy
 typing_extensions==4.2.0
