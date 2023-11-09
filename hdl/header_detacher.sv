@@ -56,7 +56,7 @@ module si_header_detacher
          $finish;
       end
       // - ensure that the DATA_WIDTH can cleanly divide 256
-      if (256 % DATA_WIDTH == 0) begin
+      if (256 % DATA_WIDTH != 0) begin
          $error("Error: data-width needs to be a divisor of 256");
          $finish;
       end
