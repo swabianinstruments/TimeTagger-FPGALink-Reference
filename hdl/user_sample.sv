@@ -8,6 +8,7 @@
  *
  * Authors:
  * - 2023 David Sawatzke <david@swabianinstruments.com>
+ * - 2023 Markus Wick <markus@swabianinstruments.com>
  *
  * This file is provided under the terms and conditions of the BSD 3-Clause
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -19,59 +20,251 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-// This module receives the tag stream and sets the LEDs on the XEM8320 based on the state of the first 5 channels on the TTX as an example
-// LED 6 on the XEM8320 will be active if an event for the first five channels was received in the last 200ms
+// This module receives the tag stream and sets the first 2 leds based on the first 2 channels
+// The data will arrive sorted from the timetagger, so the time & subtimes can be ignored for this purpose
+//
+// LED function:
+// 0-1: State of the first 2 channels
+// 2-3: Upper bits of the tag counter
+// 4:   On if there was data in the last 200 ms
+// 5:   Interval exceeded counter
+//
+// It also provides a way to detect invalid tags by determining the time
+// between two subsequent tags on a certain channel and checking if the time is
+// inside a user-provided interval.
+//
+// Register map:
+//
+// | Address | Name                | Purpose                                                                               |
+// |---------+---------------------+---------------------------------------------------------------------------------------|
+// |       0 | Presence Indicator  | Reads one, for detecting presence of this module                                      |
+// |       8 | user_control        | If a non-zero is written, the status is held in reset                                 |
+// |      12 | channel_select      | Determines which channel to monitor                                                   |
+// |      16 | lower_bound         | The lower bound of the expected interval (64 bit)                                     |
+// |      24 | upper_bound         | The upper bound of the expected interval (64 bit)                                     |
+// |      32 | failed_time         | The failing time. The upper bit is set if the value is valid (64 bit)                 |
+//
+// Note: You can replicate much of this functionality with the Vivado ILA and adding multiple ANDed triggers with comparators
+module user_sample #(
+     parameter WORD_WIDTH = 4
+) (
+     input wire                  clk,
+     input wire                  rst,
 
-module user_sample #(parameter WORD_WIDTH = 4)
-        (
-         input wire                  clk,
-         input wire                  rst,
+     // 1 if the word is valid and tkeep needs to be checked, 0 if the full word is invalid
+     input wire                  s_axis_tvalid,
+     // 1 if this module is able to accept new data in this clock period. Must always be 1
+     output wire                 s_axis_tready,
+     // The time the tag was captured at in 1/3 ps since the startup of the TTX
+     input wire [64-1:0]         s_axis_tagtime [WORD_WIDTH-1:0],
+     // The channel this event occured on. Starts at 0 while the actual channel numbering
+     // starts with 1! (if 'channel' is 2, it's actually the channel number 3)
+     input wire [4:0]            s_axis_channel [WORD_WIDTH-1:0],
+     // 1 on rising edge, 0 on falling edge
+     input wire                  s_axis_rising_edge [WORD_WIDTH-1:0],
+     // 1 for a valid event, 0 for no event
+     input wire [WORD_WIDTH-1:0] s_axis_tkeep,
 
-         // 1 if the word is valid and tkeep needs to be checked, 0 if the full word is invalid
-         input wire                  s_axis_tvalid,
-         // 1 if this module is able to accept new data in this clock period. Must always be 1
-         output wire                 s_axis_tready,
-         // The time the tag was captured at
-         // In 1/3 ps since the startup of the TTX
-         input wire [64-1:0]         s_axis_tagtime [WORD_WIDTH-1:0],
-         // The channel this event occured on
-         // Starts at 0 while the actual channel numbering starts with 1! (if 'channel' is 2, it's actually the channel number 3)
-         input wire [4:0]            s_axis_channel [WORD_WIDTH-1:0],
-         // 1 on rising edge, 0 on falling edge
-         input wire                  s_axis_rising_edge [WORD_WIDTH-1:0],
-         // 1 for a valid event, 0 for no event
-         input wire [WORD_WIDTH-1:0] s_axis_tkeep,
+     input wire                  wb_clk,
+     input wire                  wb_rst,
+     input wire [7:0]            wb_adr_i,
+     input wire [31:0]           wb_dat_i,
+     input wire                  wb_we_i,
+     input wire                  wb_stb_i,
+     input wire                  wb_cyc_i,
+     output reg [31:0]           wb_dat_o = 0,
+     output reg                  wb_ack_o,
 
-         input wire                  wb_clk,
-         input wire                  wb_rst,
-         input wire [7:0]            wb_adr_i,
-         input wire [31:0]           wb_dat_i,
-         input wire                  wb_we_i,
-         input wire                  wb_stb_i,
-         input wire                  wb_cyc_i,
-         output reg [31:0]           wb_dat_o = 0,
-         output reg                  wb_ack_o,
+     output reg [5:0]            led
+);
 
-         output reg [5:0]            led
-         );
-       assign s_axis_tready = 1;
-       int                           i;
-       logic [31 : 0] cnt;
-        always @(posedge clk) begin
-             for(i = 0; i < 4; i += 1) begin
-                  if (s_axis_tvalid & s_axis_tkeep[i]) begin
-                       if (s_axis_channel[i] < 5) begin
-                            led[s_axis_channel[i]] <= s_axis_rising_edge[i];
-                            cnt <= 31250000*2; // ~200ms
-                       end
-                  end
-             end
-            // keep the activity LED on for around 200ms
-            if (cnt > 0) begin
-                cnt <= cnt - 1;
-                led[5] <= 1;
-            end else begin
-                led[5] <= 0;
-            end
-        end
+// This module is always ready to accept new data
+assign s_axis_tready = 1;
+
+reg [31:0]                     cnt;
+reg [15:0]                     tag_counter;
+reg [$clog2(WORD_WIDTH+1)-1:0] tag_counter_inc;
+always @(posedge clk) begin
+     if (rst) begin
+          led[4:0] <= 0;
+          cnt <= 0;
+          tag_counter <= 0;
+          tag_counter_inc = 0;
+     end else begin
+          tag_counter_inc = 0;
+          for(int i = 0; i < WORD_WIDTH; i += 1) begin
+               if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i]) begin
+                    unique case (s_axis_channel[i])
+                         5'h00: begin
+                              led[0] <= s_axis_rising_edge[i];
+                         end
+                         5'h01: begin
+                              led[1] <= s_axis_rising_edge[i];
+                         end
+                         default: ;
+                    endcase
+                    cnt <= 31250000*2; // ~200ms
+                    tag_counter_inc = tag_counter_inc + 1;
+               end
+          end
+          tag_counter <= tag_counter + tag_counter_inc;
+          // keep the activity LED on for around 200ms
+          if (cnt > 0) begin
+               cnt <= cnt - 1;
+               led[4] <= 1;
+          end else begin
+               led[4] <= 0;
+          end
+          led[3:2] = tag_counter[15:14];
+     end
+end
+
+reg [31:0]  user_control_wb;
+reg [4:0]   channel_select_wb;
+reg [63:0]  lower_bound_wb;
+reg [63:0]  upper_bound_wb;
+wire [63:0] failed_wb;
+wire [31:0] user_control;
+wire [4:0]  channel_select;
+wire [63:0] lower_bound;
+wire [63:0] upper_bound;
+reg [63:0]  failed;
+
+xpm_cdc_array_single #(
+     .WIDTH($bits({user_control_wb, channel_select_wb, lower_bound_wb, upper_bound_wb})))
+user_wb_in (
+     .dest_out({user_control, channel_select, lower_bound, upper_bound}),
+     .dest_clk(clk),
+     .src_clk(wb_clk),
+     .src_in({user_control_wb, channel_select_wb, lower_bound_wb, upper_bound_wb}));
+xpm_cdc_array_single #(
+     .WIDTH($bits({failed})))
+user_wb_out (
+     .dest_out({failed_wb}),
+     .dest_clk(wb_clk),
+     .src_clk(clk),
+     .src_in({failed}));
+
+reg [63:0] tagtimes             [WORD_WIDTH-1:0];
+reg        tagtimes_valid       [WORD_WIDTH-1:0];
+reg [63:0] tagtimes_p           [WORD_WIDTH-1:0];
+reg        tagtimes_valid_p     [WORD_WIDTH-1:0];
+reg [63:0] prev_tagtime_blocking;
+reg        prev_tagtime_valid_blocking;
+reg [63:0] prev_tagtimes        [WORD_WIDTH-1:0];
+reg        prev_tagtimes_valid  [WORD_WIDTH-1:0];
+reg [63:0] tagtime_diff         [WORD_WIDTH-1:0];
+reg        tagtime_diff_valid   [WORD_WIDTH-1:0];
+reg [63:0] tagtime_diff_p       [WORD_WIDTH-1:0];
+reg        tagtime_diff_p_error [WORD_WIDTH-1:0];
+always @(posedge clk) begin
+     if (rst || (user_control != 0)) begin
+          led[5] <= 1'b0;
+          failed <= 64'h0;
+          prev_tagtime_blocking = 'x;
+          prev_tagtime_valid_blocking = 0;
+          for(int i = 0; i < WORD_WIDTH; i += 1) begin
+               tagtimes[i] <= 'x;
+               tagtimes_p[i] <= 'x;
+               tagtimes_valid[i] <= 0;
+               tagtimes_valid_p[i] <= 0;
+               prev_tagtimes[i] <= 'x;
+               prev_tagtimes_valid[i] <= 0;
+               tagtime_diff[i] <= 'x;
+               tagtime_diff_valid[i] <= 0;
+               tagtime_diff_p[i] <= 'x;
+               tagtime_diff_p_error[i] <= 0;
+          end
+     end else begin
+          for(int i = 0; i < WORD_WIDTH; i += 1) begin
+               /*
+               // reference implementation without pipeline stages
+               if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i] && channel_select == s_axis_channel[i]) begin
+                    if (prev_tagtime_valid_blocking) begin
+                         tagtime_diff[i] = s_axis_tagtime[i] - prev_tagtime_blocking;
+                         if (tagtime_diff[i] < lower_bound || tagtime_diff[i] > upper_bound) begin
+                              failed <= tagtime_diff[i];
+                              failed[63] <= 1;
+                              led[5] <= 1'b1;
+                         end
+                    end
+                    prev_tagtime_blocking = s_axis_tagtime[i];
+                    prev_tagtime_valid_blocking = 1;
+               end
+               */
+
+               // First pipeline stage (full parallel): Select if this lane is active
+               tagtimes[i] <= 'x;
+               tagtimes_valid[i] <= 0;
+               if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i] && channel_select == s_axis_channel[i]) begin
+                    tagtimes[i] <= s_axis_tagtime[i];
+                    tagtimes_valid[i] <= 1;
+               end
+
+               // Second pipeline stage (blocking statements): Mux the previous active event
+               tagtimes_p[i] <= tagtimes[i];
+               tagtimes_valid_p[i] <= tagtimes_valid[i];
+               prev_tagtimes[i] <= prev_tagtime_blocking;
+               prev_tagtimes_valid[i] <= prev_tagtime_valid_blocking;
+               if (tagtimes_valid[i]) begin
+                    // Assign the blocking registers, so they will be available for both the next lane and the next clock cycle
+                    // Note: The order here matters. These registers must be set *after* they are used a few lines ago.
+                    prev_tagtime_blocking = tagtimes[i];
+                    prev_tagtime_valid_blocking = tagtimes_valid[i];
+               end
+
+               // Third pipeline stage (full parallel): Calculate the time differences
+               tagtime_diff[i] <= tagtimes_p[i] - prev_tagtimes[i];
+               tagtime_diff_valid[i] <= tagtimes_valid_p[i] && prev_tagtimes_valid[i];
+
+               // Fourth pipeline stage (full parallel): Calculate if this time difference is an error
+               tagtime_diff_p[i] <= tagtime_diff[i];
+               tagtime_diff_p_error[i] <= tagtime_diff_valid[i] && (tagtime_diff[i] < lower_bound || tagtime_diff[i] > upper_bound);
+
+               // Fiveth pipeline stage (last active lane): Mux the failing time difference
+               if (tagtime_diff_p_error[i]) begin
+                    failed <= tagtime_diff_p[i];
+                    failed[63] <= 1;
+                    led[5] <= 1'b1;
+               end
+          end
+     end
+end
+
+always @(posedge wb_clk) begin
+     wb_ack_o <= 0;
+     if (wb_rst) begin
+          wb_dat_o <= 0;
+          user_control_wb <= 0;
+          channel_select_wb <= 0;
+          lower_bound_wb <= 64'h0000000000330000;
+          upper_bound_wb <= 64'h0000000000340000;
+     end else if (wb_cyc_i && wb_stb_i) begin
+          wb_ack_o <= 1;
+          if (wb_we_i) begin
+               // Write
+               unique casez (wb_adr_i)
+                    8'b000010??: user_control_wb <= wb_dat_i;
+                    8'b000011??: channel_select_wb <= wb_dat_i;
+                    8'b00010???: lower_bound_wb[(wb_adr_i & 4) * 8 +: 32] <= wb_dat_i;
+                    8'b00011???: upper_bound_wb[(wb_adr_i & 4) * 8 +: 32] <= wb_dat_i;
+                    default: ;
+               endcase
+          end else begin
+               // Read
+               unique casez (wb_adr_i)
+                    // Indicate the bus slave is present in the design
+                    8'b000000??: wb_dat_o <= 1;
+                    8'b000010??: wb_dat_o <= user_control_wb;
+                    8'b000011??: wb_dat_o <= channel_select_wb;
+                    8'b00010???: wb_dat_o <= lower_bound_wb[(wb_adr_i & 4) * 8 +: 32];
+                    8'b00011???: wb_dat_o <= upper_bound_wb[(wb_adr_i & 4) * 8 +: 32];
+                    8'b00100???: wb_dat_o <= failed_wb[(wb_adr_i & 4) * 8 +: 32];
+                    default: wb_dat_o <= 32'h00000000;
+               endcase
+          end
+     end else begin
+          wb_dat_o <= 0;
+     end
+end
 endmodule
