@@ -14,7 +14,7 @@ implementation : synthesis
 	 vivado -mode tcl -source scripts/implementation.tcl
 
 clean :
-	rm -rf $(filter-out Makefile constr hdl scripts config host . .., $(wildcard *) $(wildcard .*)) .Xil
+	rm -rf $(filter-out Makefile constr hdl scripts config host README.md . .., $(wildcard *) $(wildcard .*)) .Xil
 
 $(PROJECT_NAME).xpr:
 	 vivado -mode tcl -source scripts/create_project.tcl

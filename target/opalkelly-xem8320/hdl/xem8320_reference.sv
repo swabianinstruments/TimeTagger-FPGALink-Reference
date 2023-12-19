@@ -20,7 +20,9 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-module xem8320_reference (
+module xem8320_reference #(
+    parameter WORD_WIDTH = 2 // Amount of events processed in parallel
+)(
     // OpalKelly USB Host Interface
     input wire [4:0]  okUH,
     output wire [2:0] okHU,
@@ -288,14 +290,14 @@ module xem8320_reference (
       .m_axis_tkeep(data_stream_tkeep)
       );
 
-   wire         tag_stream_tready;
-   wire         tag_stream_tvalid;
-   wire [31:0]  tag_stream_tdata;
-   wire         tag_stream_tlast;
-   wire [3:0]   tag_stream_tkeep;
-   wire [31:0]  tag_stream_tuser; // Contains wrap count
+   wire                      tag_stream_tready;
+   wire                      tag_stream_tvalid;
+   wire [WORD_WIDTH*32-1:0]  tag_stream_tdata;
+   wire                      tag_stream_tlast;
+   wire [WORD_WIDTH*4-1:0]   tag_stream_tkeep;
+   wire [31:0]               tag_stream_tuser; // Contains wrap count
 
-   si_data_channel #(.DATA_WIDTH_IN(128), .DATA_WIDTH_OUT(32), .STATISTICS(1)) data_channel
+   si_data_channel #(.DATA_WIDTH_IN(128), .DATA_WIDTH_OUT(32 * WORD_WIDTH), .STATISTICS(1)) data_channel
      (
       .eth_clk(sfpp1_eth_10g_axis_rx_clk),
       .eth_rst(sfpp1_eth_10g_axis_rx_rst),
@@ -327,35 +329,43 @@ module xem8320_reference (
       .wb_ack_o(wb.slave_ack_o[3])
       );
 
-   wire [4:0]  channel;
-   wire        rising_edge;
-   wire [63:0] tagtime;
-   wire        valid_tag;
+   wire [4:0]               user_sample_inp_channel     [WORD_WIDTH-1 : 0];
+   wire                     user_sample_inp_rising_edge [WORD_WIDTH-1 : 0];
+   wire [63:0]              user_sample_inp_tagtime     [WORD_WIDTH-1 : 0];
+   wire [WORD_WIDTH-1 : 0]  user_sample_inp_tkeep;
+   wire                     user_sample_inp_tready;
+   wire                     user_sample_inp_tvalid;
 
-   // Adapt from axi stream since the following modules don't it
-   assign tag_stream_tready = 1;
-   si_tag_converter converter
+   si_tag_converter #(.DATA_WIDTH_IN(32*WORD_WIDTH)) converter
      (
       .clk(sfpp1_eth_10g_axis_rx_clk),
       .rst(sfpp1_eth_10g_axis_rx_rst),
-      .tag((tag_stream_tvalid && tag_stream_tready) ? tag_stream_tdata : 0),
-      .wrap_count(tag_stream_tuser),
+      .s_axis_tvalid(tag_stream_tvalid),
+      .s_axis_tready(tag_stream_tready),
+      .s_axis_tdata(tag_stream_tdata),
+      .s_axis_tlast(tag_stream_tlast),
+      .s_axis_tkeep(tag_stream_tkeep),
+      .s_axis_tuser(tag_stream_tuser),
 
-      .valid_tag(valid_tag),
-      .tagtime(tagtime),
-      .channel(channel),
-      .rising_edge(rising_edge)
+      .m_axis_tvalid(user_sample_inp_tvalid),
+      .m_axis_tready(user_sample_inp_tready),
+      .m_axis_tkeep(user_sample_inp_tkeep),
+      .m_axis_tagtime(user_sample_inp_tagtime),
+      .m_axis_channel(user_sample_inp_channel),
+      .m_axis_rising_edge(user_sample_inp_rising_edge)
       );
 
-   user_sample user_design
+   user_sample #(.WORD_WIDTH(WORD_WIDTH)) user_design
      (
       .clk(sfpp1_eth_10g_axis_rx_clk),
       .rst(sfpp1_eth_10g_axis_rx_rst),
 
-      .valid_tag(valid_tag),
-      .tagtime(tagtime),
-      .channel(channel),
-      .rising_edge(rising_edge),
+      .s_axis_tvalid(user_sample_inp_tvalid),
+      .s_axis_tready(user_sample_inp_tready),
+      .s_axis_tkeep(user_sample_inp_tkeep),
+      .s_axis_channel(user_sample_inp_channel),
+      .s_axis_tagtime(user_sample_inp_tagtime),
+      .s_axis_rising_edge(user_sample_inp_rising_edge),
 
       .wb_clk(okClk),
       .wb_rst(okRst),

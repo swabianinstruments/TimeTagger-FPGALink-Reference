@@ -20,7 +20,9 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-module xem8320_reference_qsfp (
+module xem8320_reference_qsfp #(
+    parameter WORD_WIDTH = 4 // Amount of events processed in parallel
+)(
     // OpalKelly USB Host Interface
     input wire [4:0]  okUH,
     output wire [2:0] okHU,
@@ -288,14 +290,14 @@ module xem8320_reference_qsfp (
       .m_axis_tkeep(data_stream_tkeep)
       );
 
-   wire         tag_stream_tready;
-   wire         tag_stream_tvalid;
-   wire [127:0] tag_stream_tdata;
-   wire         tag_stream_tlast;
-   wire [15:0]  tag_stream_tkeep;
-   wire [31:0]  tag_stream_tuser; // Contains wrap count
+   wire                      tag_stream_tready;
+   wire                      tag_stream_tvalid;
+   wire [WORD_WIDTH*32-1:0]  tag_stream_tdata;
+   wire                      tag_stream_tlast;
+   wire [WORD_WIDTH*4-1:0]   tag_stream_tkeep;
+   wire [31:0]               tag_stream_tuser; // Contains wrap count
 
-   si_data_channel #(.DATA_WIDTH_IN(128), .DATA_WIDTH_OUT(128), .STATISTICS(1)) data_channel
+   si_data_channel #(.DATA_WIDTH_IN(128), .DATA_WIDTH_OUT(32 * WORD_WIDTH), .STATISTICS(1)) data_channel
      (
       .eth_clk(sfpp1_eth_10g_axis_rx_clk),
       .eth_rst(sfpp1_eth_10g_axis_rx_rst),
@@ -327,15 +329,14 @@ module xem8320_reference_qsfp (
       .wb_ack_o(wb.slave_ack_o[3])
       );
 
-   wire [4:0]  channel [3:0];
-   wire        rising_edge [3:0];
-   wire [63:0] tagtime [3:0];
-   wire [3:0]  conv_stream_tkeep;
-   wire        conv_stream_tready;
-   wire        conv_stream_tvalid;
+   wire [4:0]               user_sample_inp_channel     [WORD_WIDTH-1 : 0];
+   wire                     user_sample_inp_rising_edge [WORD_WIDTH-1 : 0];
+   wire [63:0]              user_sample_inp_tagtime     [WORD_WIDTH-1 : 0];
+   wire [WORD_WIDTH-1 : 0]  user_sample_inp_tkeep;
+   wire                     user_sample_inp_tready;
+   wire                     user_sample_inp_tvalid;
 
-   // Adapt from axi stream since the following modules don't it
-   si_tag_converter_wide converter
+   si_tag_converter #(.DATA_WIDTH_IN(32*WORD_WIDTH)) converter
      (
       .clk(sfpp1_eth_10g_axis_rx_clk),
       .rst(sfpp1_eth_10g_axis_rx_rst),
@@ -346,25 +347,25 @@ module xem8320_reference_qsfp (
       .s_axis_tkeep(tag_stream_tkeep),
       .s_axis_tuser(tag_stream_tuser),
 
-      .m_axis_tvalid(conv_stream_tvalid),
-      .m_axis_tready(conv_stream_tready),
-      .m_axis_tkeep(conv_stream_tkeep),
-      .m_axis_tagtime(tagtime),
-      .m_axis_channel(channel),
-      .m_axis_rising_edge(rising_edge)
+      .m_axis_tvalid(user_sample_inp_tvalid),
+      .m_axis_tready(user_sample_inp_tready),
+      .m_axis_tkeep(user_sample_inp_tkeep),
+      .m_axis_tagtime(user_sample_inp_tagtime),
+      .m_axis_channel(user_sample_inp_channel),
+      .m_axis_rising_edge(user_sample_inp_rising_edge)
       );
 
-   user_sample_wide user_design
+   user_sample #(.WORD_WIDTH(WORD_WIDTH)) user_design
      (
       .clk(sfpp1_eth_10g_axis_rx_clk),
       .rst(sfpp1_eth_10g_axis_rx_rst),
 
-      .s_axis_tvalid(conv_stream_tvalid),
-      .s_axis_tready(conv_stream_tready),
-      .s_axis_tkeep(conv_stream_tkeep),
-      .s_axis_channel(channel),
-      .s_axis_tagtime(tagtime),
-      .s_axis_rising_edge(rising_edge),
+      .s_axis_tvalid(user_sample_inp_tvalid),
+      .s_axis_tready(user_sample_inp_tready),
+      .s_axis_tkeep(user_sample_inp_tkeep),
+      .s_axis_channel(user_sample_inp_channel),
+      .s_axis_tagtime(user_sample_inp_tagtime),
+      .s_axis_rising_edge(user_sample_inp_rising_edge),
 
       .wb_clk(okClk),
       .wb_rst(okRst),
