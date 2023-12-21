@@ -22,6 +22,7 @@
 
 module user_sample_tb
   #(
+    parameter WORD_WIDTH = 2,  // Amount of events processed in one clock period
     parameter channels = 3,    // Channels for which events will be generated
     parameter event_gap = 4000 // The time between each event in 1/3 ps
     ) ();
@@ -41,42 +42,58 @@ module user_sample_tb
       #1 clk = ~clk;
    end
 
-   reg         valid_tag;
-   reg [63:0]  tagtime = 0;
-   reg [4:0]   channel;
-   reg         rising_edge;
+   reg [4:0]               channel     [WORD_WIDTH-1 : 0];
+   reg                     rising_edge [WORD_WIDTH-1 : 0];
+   reg [63:0]              tagtime     [WORD_WIDTH-1 : 0];
+   reg [WORD_WIDTH-1 : 0]  tkeep;
 
-   user_sample sample (
-                       .clk(clk),
-                       .rst(rst),
+   user_sample #(.WORD_WIDTH(WORD_WIDTH)) user_design
+     (
+      .clk(clk),
+      .rst(rst),
 
-                       .valid_tag(valid_tag),
-                       .tagtime(tagtime),
-                       .channel(channel),
-                       .rising_edge(rising_edge),
+      .s_axis_tvalid(|tkeep),
+      .s_axis_tready(),
+      .s_axis_tkeep(tkeep),
+      .s_axis_channel(channel),
+      .s_axis_tagtime(tagtime),
+      .s_axis_rising_edge(rising_edge),
 
-                       // Deliberately unused
-                       .wb_clk(),
-                       .wb_rst(),
-                       .wb_adr_i(),
-                       .wb_dat_i(),
-                       .wb_we_i(),
-                       .wb_stb_i(),
-                       .wb_cyc_i(),
-                       .wb_dat_o(),
-                       .wb_ack_o(),
-                       .led());
+      // Deliberately unused
+      .wb_clk(clk), // fake clk
+      .wb_rst(1),
+      .wb_adr_i(),
+      .wb_dat_i(),
+      .wb_dat_o(),
+      .wb_we_i(),
+      .wb_stb_i(),
+      .wb_cyc_i(),
+      .wb_ack_o(),
 
+      .led()
+   );
+
+   reg [63:0] prev_tagtime;
    always @(posedge clk) begin
-      if ($urandom % 2) begin
-         valid_tag <= 1;
-         tagtime <= tagtime + event_gap;
-         channel <= $urandom % channels;
-         // This can generate e.g. multiple rising edges for the same channel without falling ones in between
-         // The Time Tagger will behave in the same way if only the channel with rising edges is used
-         rising_edge <= $urandom % 2;
+      if (rst) begin
+         prev_tagtime = 0;
       end else begin
-         valid_tag <= 0;
+         for(int i = 0; i < WORD_WIDTH; i += 1) begin
+            if ($urandom % 2) begin
+               prev_tagtime = prev_tagtime + event_gap;
+               tkeep[i]   <= 1;
+               tagtime[i] <= prev_tagtime;
+               channel[i] <= $urandom % channels;
+               // This can generate e.g. multiple rising edges for the same channel without falling ones in between
+               // The Time Tagger will behave in the same way if only the channel with rising edges is used
+               rising_edge[i] <= $urandom % 2;
+            end else begin
+               tkeep[i]   <= 0;
+               tagtime[i] <= 'x;
+               channel[i] <= 'x;
+               rising_edge[i] <= 'x;
+            end
+         end
       end
    end
 

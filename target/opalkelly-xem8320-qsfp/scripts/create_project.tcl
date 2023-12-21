@@ -48,9 +48,9 @@ set files [list \
  "[file normalize "$origin_dir/hdl/data_channel.sv"]"\
  "[file normalize "$origin_dir/hdl/header_detacher.sv"]"\
  "[file normalize "$origin_dir/hdl/header_parser.sv"]"\
- "[file normalize "$origin_dir/hdl/user_sample_wide.sv"]"\
+ "[file normalize "$origin_dir/hdl/user_sample.sv"]"\
  "[file normalize "$origin_dir/hdl/statistics_wb.sv"]"\
- "[file normalize "$origin_dir/hdl/tag_converter_wide.sv"]"\
+ "[file normalize "$origin_dir/hdl/tag_converter.sv"]"\
  "[file normalize "$origin_dir/gen_srcs/eth_crc_128b_comb.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_rx.v"]"\
