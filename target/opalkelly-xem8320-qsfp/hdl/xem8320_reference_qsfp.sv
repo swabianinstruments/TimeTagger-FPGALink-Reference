@@ -53,7 +53,10 @@ module xem8320_reference_qsfp #(
     output wire [5:0] led
 );
 
-    // ---------- OPALKELLY INTERFACE ----------
+    // --------------------------------------------------- //
+    // --------------- OPALKELLY INTERFACE --------------- //
+    // --------------------------------------------------- //
+
     // Target interface bus
     wire              okClk;
     wire [112:0]      okHE;
@@ -117,6 +120,7 @@ module xem8320_reference_qsfp #(
         end
     end
 
+    // Opal Kelly -> Wishbone bridge
     wb_pipe_bridge #(
         .BLOCK_CNT(4),
         .BTPIPEIN_ADDR(8'h83),
@@ -127,6 +131,10 @@ module xem8320_reference_qsfp #(
        .okHE(okHE),
        .okEH(okEH_wb_pipe_bridge),
        .wb_master(wb.master_port));
+
+    // --------------------------------------------------- //
+    // -------------- SFP+ PORT 1 INTERFACE -------------- //
+    // --------------------------------------------------- //
 
     // ---------- SFP+ PORT 1 MANAGEMENT INTERFACE I2C-WB CORE ----------
     wire sfpp1_i2c_scl_in;
@@ -203,6 +211,7 @@ module xem8320_reference_qsfp #(
 
     assign sfpp1_eth_10g_axis_tx_tvalid = 0;
 
+    // Transceiver + PHY
     sfpp1_eth_10g_axis sfpp1_eth_10g_axis_inst (
         .wb_clk(okClk),
         .wb_rst(okRst),
@@ -247,6 +256,7 @@ module xem8320_reference_qsfp #(
    wire         wide_rx_data_tlast;
    wire [15:0]  wide_rx_data_tkeep;
 
+   // 64 bit to 128 bit adapter
    axis_adapter #(.S_DATA_WIDTH(64), .M_DATA_WIDTH(128), .USER_ENABLE(0)) adapter
      (
         .clk(sfpp1_eth_10g_axis_rx_clk),
@@ -265,13 +275,13 @@ module xem8320_reference_qsfp #(
         .m_axis_tkeep(wide_rx_data_tkeep)
     );
 
-
    wire         data_stream_tready;
    wire         data_stream_tvalid;
    wire [127:0] data_stream_tdata;
    wire         data_stream_tlast;
    wire [15:0]  data_stream_tkeep;
 
+   // CRC checksum verification
    eth_axis_fcs_checker_128b
      (
       .clk(sfpp1_eth_10g_axis_rx_clk),
@@ -290,6 +300,10 @@ module xem8320_reference_qsfp #(
       .m_axis_tkeep(data_stream_tkeep)
       );
 
+    // --------------------------------------------------- //
+    // ----------- FPGA-link protocol decoding ----------- //
+    // --------------------------------------------------- //
+
    wire                      tag_stream_tready;
    wire                      tag_stream_tvalid;
    wire [WORD_WIDTH*32-1:0]  tag_stream_tdata;
@@ -297,6 +311,7 @@ module xem8320_reference_qsfp #(
    wire [WORD_WIDTH*4-1:0]   tag_stream_tkeep;
    wire [31:0]               tag_stream_tuser; // Contains wrap count
 
+   // Decoding of the FPGA-link protocol
    si_data_channel #(.DATA_WIDTH_IN(128), .DATA_WIDTH_OUT(32 * WORD_WIDTH), .STATISTICS(1)) data_channel
      (
       .eth_clk(sfpp1_eth_10g_axis_rx_clk),
@@ -336,6 +351,7 @@ module xem8320_reference_qsfp #(
    wire                     user_sample_inp_tready;
    wire                     user_sample_inp_tvalid;
 
+   // Generate 64 bit timestamps
    si_tag_converter #(.DATA_WIDTH_IN(32*WORD_WIDTH)) converter
      (
       .clk(sfpp1_eth_10g_axis_rx_clk),
@@ -354,6 +370,10 @@ module xem8320_reference_qsfp #(
       .m_axis_channel(user_sample_inp_channel),
       .m_axis_rising_edge(user_sample_inp_rising_edge)
       );
+
+    // --------------------------------------------------- //
+    // ------ User design, place your modules here! ------ //
+    // --------------------------------------------------- //
 
    user_sample #(.WORD_WIDTH(WORD_WIDTH)) user_design
      (
