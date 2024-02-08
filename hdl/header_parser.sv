@@ -43,8 +43,7 @@ module si_header_parser
        output reg [KEEP_WIDTH-1:0]   m_axis_tkeep,
 
        // Status signals
-       // Gets set if a packet is lost
-       // Sticky!
+       // Is high when a packet is lost
        output reg                    lost_packet,
 
        // If a packet isn't recognized, this flag is active while the packet is received
@@ -85,6 +84,7 @@ module si_header_parser
          lost_packet <= 0;
          next_sequence <= 0;
       end else if (packet_word_counter != 0) begin
+         lost_packet <= 0;
          if (s_axis_tvalid && s_axis_tready) begin
             if ((packet_word_counter == 1)
                 && valid_header) begin

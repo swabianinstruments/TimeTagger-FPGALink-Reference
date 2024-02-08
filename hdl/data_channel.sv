@@ -47,8 +47,7 @@ module si_data_channel
 
        // Status signals
 
-       // Gets set if a packet is lost
-       // Sticky!
+       // Is high if a packet is lost
        // eth_clk
        output wire                      lost_packet,
        // Set on FIFO Overflow
@@ -193,16 +192,20 @@ module si_data_channel
 
 
    generate if (STATISTICS == 1) begin
-      si_statistics_wb statistics
+      si_statistics_wb
+        #(.DATA_WIDTH(DATA_WIDTH_IN))
+      statistics
         (
          .eth_clk(eth_clk),
          .eth_rst(eth_rst),
          .pre_axis_tvalid(s_axis_tvalid),
          .pre_axis_tready(s_axis_tready),
          .pre_axis_tlast(s_axis_tlast),
-         .post_axis_tvalid(filtered_axis_tvalid),
-         .post_axis_tready(filtered_axis_tready),
-         .post_axis_tlast(filtered_axis_tlast),
+         .post_axis_tvalid(unpacked_axis_tvalid),
+         .post_axis_tdata(unpacked_axis_tdata),
+         .post_axis_tkeep(unpacked_axis_tkeep),
+         .post_axis_tready(unpacked_axis_tready),
+         .post_axis_tlast(unpacked_axis_tlast),
 
          .lost_packet(lost_packet),
          .invalid_packet(invalid_packet),

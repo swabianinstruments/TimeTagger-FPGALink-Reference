@@ -37,6 +37,12 @@ class Statistics:
             "signed": False,
             "unit": "Words (128 bit)/s",
         },
+        "tag_rate": {
+            "val_addr": 40,
+            "div": 1,
+            "signed": False,
+            "unit": "Tags/s",
+        },
         "received_packets": {
             "val_addr": 20,
             "div": 1,
@@ -49,6 +55,12 @@ class Statistics:
             "signed": False,
             "unit": "Words (128 bit)",
         },
+        "received_tags": {
+            "val_addr": 44,
+            "div": 1,
+            "signed": False,
+            "unit": "Tags",
+        },
         "size_of_last_packet": {
             "val_addr": 28,
             "div": 1,
@@ -57,6 +69,12 @@ class Statistics:
         },
         "packet_loss": {
             "val_addr": 32,
+            "div": 1,
+            "signed": False,
+            "unit": "bool",
+        },
+        "overflowed": {
+            "val_addr": 48,
             "div": 1,
             "signed": False,
             "unit": "bool",
