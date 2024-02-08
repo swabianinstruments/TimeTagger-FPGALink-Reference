@@ -1,5 +1,5 @@
 # SFP(+) Module I2C Interface Script
-# 
+#
 # This file is part of the Time Tagger software defined digital data
 # acquisition FPGA-link reference design.
 #
@@ -23,7 +23,7 @@ import textwrap
 import ok
 
 from .i2c import I2CRW, MockI2CBus, MockI2CSlave, I2CInterface
-from .xem_wishbone import XEMWishbone
+from .ok_wishbone import Wishbone
 from .xem_i2c import WishboneI2C
 
 class SFPType(IntEnum):
@@ -504,8 +504,8 @@ def main():
             "configured, cannot continue!"
 
         # Instantiate the I2C bus wrapper based on the SFP argument
-        wb = XEMWishbone(xem)
-        i2c_bus = WishboneI2C(wb, 0b10 << 8)
+        wb = Wishbone(xem)
+        i2c_bus = WishboneI2C(wb, 0b100000000000000000000010 << 8)
     elif args.device == "dumpfile":
         if args.dumpfile_in is None:
             parser.error("--device dumpfile requires --dumpfile-in")

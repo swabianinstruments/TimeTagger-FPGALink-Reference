@@ -1,6 +1,6 @@
 /**
  * XEM8320 QSFP Time Tagger FPGALink Reference Design Top-Level Module.
- * 
+ *
  * This file is part of the Time Tagger software defined digital data
  * acquisition FPGA-link reference design.
  *
@@ -8,7 +8,9 @@
  *
  * Authors:
  * - 2022 Leon Schuermann <leon@swabianinstruments.com>
- * - 2022-2023 David Sawatzke <david@swabianinstruments.com>
+ * - 2022-2024 David Sawatzke <david@swabianinstruments.com>
+ * - 2023-2024 Ehsan Jokar <ehsan@swabianinstruments.com>
+ * - 2023-2024 Markus Wick <markus@swabianinstruments.com>
  *
  * This file is provided under the terms and conditions of the BSD 3-Clause
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -73,14 +75,14 @@ module xem8320_reference_qsfp #(
         .okEH(okEH));
 
     // OpalKelly WireOr to connect the various outputs
-    wire [64:0]       okEH_wb_pipe_bridge;
-    okWireOR #(
-        .N(1))
+    wire [64:0]       okEH_PipeIn;
+    wire [64:0]       okEH_PipeOut;
+
+    okWireOR #(.N(2))
     okWireOR_inst (
         .okEH(okEH),
-        .okEHx({
-            okEH_wb_pipe_bridge
-        }));
+        .okEHx({ okEH_PipeIn, okEH_PipeOut})
+        );
 
     // Central synchronous okClk reset
     wire okRst;
@@ -120,17 +122,53 @@ module xem8320_reference_qsfp #(
         end
     end
 
-    // Opal Kelly -> Wishbone bridge
-    wb_pipe_bridge #(
-        .BLOCK_CNT(4),
-        .BTPIPEIN_ADDR(8'h83),
-        .BTPIPEOUT_ADDR(8'ha4))
-    wb_pipe_bridge_inst (
-       .okClk(okClk),
-       .okRst(okRst),
-       .okHE(okHE),
-       .okEH(okEH_wb_pipe_bridge),
-       .wb_master(wb.master_port));
+    wire        receive_ready;
+    wire        ep_write;
+    wire        wr_strobe;
+    wire [31:0] pipein_fifo_data;
+    wire [31:0] pipeout_fifo_data;
+    wire        send_ready;
+    wire        rd_strobe;
+    wire        ep_read;
+
+    okBTPipeIn okBTPipeIn_83 (
+      .okHE(okHE),
+      .okEH(okEH_PipeIn),
+      .ep_addr(8'h83),
+      .ep_dataout(pipein_fifo_data),
+      .ep_write(ep_write),
+      .ep_blockstrobe(wr_strobe),
+      .ep_ready(receive_ready)
+    );
+
+    okBTPipeOut okBTPipeOut_A4 (
+      .okHE(okHE),
+      .okEH(okEH_PipeOut),
+      .ep_addr(8'ha4),
+      .ep_datain(pipeout_fifo_data),
+      .ep_read(ep_read),
+      .ep_blockstrobe(rd_strobe),
+      .ep_ready(send_ready)
+    );
+
+    wb_master #(
+        .FIFO_IN_SIZE(2048),
+        .FIFO_OUT_SIZE(2048),
+        .TIME_OUT_VAL(8*1024*1024)
+
+    ) wb_master_core (
+        .clk(okClk),
+        .rst(okRst),
+        .ep_write(ep_write),
+        .wr_strobe(wr_strobe),
+        .data_i(pipein_fifo_data),
+        .receive_ready(receive_ready),
+        .rd_strobe(rd_strobe),
+        .ep_read(ep_read),
+        .send_ready(send_ready),
+        .data_o(pipeout_fifo_data),
+        .wb_master(wb.master_port)
+    );
 
     // --------------------------------------------------- //
     // -------------- SFP+ PORT 1 INTERFACE -------------- //

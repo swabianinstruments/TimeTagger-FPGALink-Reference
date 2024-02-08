@@ -1,5 +1,5 @@
 # OpalKelly Module Wishbone-I2C Core Interface Driver
-# 
+#
 # This file is part of the Time Tagger software defined digital data
 # acquisition FPGA-link reference design.
 #
@@ -15,7 +15,6 @@
 
 from enum import IntEnum
 
-from .xem_wishbone import WishboneTransaction, WishboneRW
 from .i2c import I2CInterface, I2CRW
 
 class WBI2CReg(IntEnum):
@@ -46,33 +45,21 @@ class WishboneI2C(I2CInterface):
 
     def __read_wb(self, addr):
         if len(self.queued_wb_writes) > 0:
-            txns = [
-                WishboneTransaction(
-                    waddr, WishboneRW.Write, write_val=val)
-                for waddr, val in self.queued_wb_writes
-            ]
-            read_txn = WishboneTransaction(
-                self.i2c_base + addr, WishboneRW.Read)
-            txns += [read_txn]
-            assert self.wb.bulk_chunk_size() >= len(txns)
-            self.wb.bulk_process(txns)
-            assert read_txn.is_fulfilled()
+            for waddr, val in self.queued_wb_writes:
+                self.wb.write(waddr,val)
+
             self.queued_wb_writes = []
-            return read_txn.read_val
+
+            return self.wb.read(self.i2c_base + addr)
+
         else:
             return self.wb.read(self.i2c_base + addr)
 
     def flush_writes(self):
-        if len(self.queued_wb_writes) > 0:
-            txns = [
-                WishboneTransaction(
-                    waddr, WishboneRW.Write, write_val=val)
-                for waddr, val in self.queued_wb_writes
-            ]
-            assert self.wb.bulk_chunk_size() >= len(txns)
-            self.wb.bulk_process(txns)
-            assert txns[-1].is_fulfilled()
-            self.queued_wb_writes = []
+
+        for waddr, val in self.queued_wb_writes:
+            self.wb.write(waddr,val)
+        self.queued_wb_writes = []
 
     def queue_wb_writes(self, queue_writes=True):
         if not queue_writes:

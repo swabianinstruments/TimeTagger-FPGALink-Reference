@@ -41,7 +41,7 @@ set files [list \
  "[file normalize "$target_dir/hdl/sfpp1_eth_10g_axis.sv"]"\
  "[file normalize "$origin_dir/hdl/eth_axis_fcs_checker_128b.sv"]"\
  "[file normalize "$origin_dir/hdl/wb_interface.sv"]"\
- "[file normalize "$origin_dir/hdl/wb_pipe_bridge.sv"]"\
+ "[file normalize "$origin_dir/hdl/wb_master.sv"]"\
  "[file normalize "$origin_dir/hdl/xgmii_axis_bridge.sv"]"\
  "[file normalize "$origin_dir/hdl/xgmii_axis_bridge_rx_64b.sv"]"\
  "[file normalize "$origin_dir/hdl/xgmii_axis_bridge_tx_64b.sv"]"\

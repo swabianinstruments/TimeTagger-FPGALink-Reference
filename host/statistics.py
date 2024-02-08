@@ -20,7 +20,7 @@ import textwrap
 
 import ok
 
-from .xem_wishbone import XEMWishbone
+from .ok_wishbone import Wishbone
 
 
 class Statistics:
@@ -70,7 +70,7 @@ class Statistics:
     }
 
     def __init__(self, wb, offset):
-        assert isinstance(wb, XEMWishbone)
+        assert isinstance(wb, Wishbone)
         self.wb = wb
         self.offset = offset
 
@@ -169,9 +169,9 @@ def main():
         "configured, cannot continue!"
     )
 
-    wb = XEMWishbone(xem)
+    wb = Wishbone(xem)
 
-    stat = Statistics(wb, 0b1010001 << 8)
+    stat = Statistics(wb, 0b100000000000000001010001 << 8)
 
     stat.print_diagnostics()
     if args.monitor:
