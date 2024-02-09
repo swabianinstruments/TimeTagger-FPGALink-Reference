@@ -1,7 +1,7 @@
 /**
  * XEM8320 SFP+ Slot 1 Transceiver + 10Gbit/s Ethernet PHY +
  * XGMII-to-AXI4-Stream instantiation.
- * 
+ *
  * This file is part of the Time Tagger software defined digital data
  * acquisition FPGA-link reference design.
  *
@@ -209,7 +209,16 @@ module sfpp1_eth_10g_axis
         .rxstartofseq_out());
 
     // Control signal assignments
-    assign transceiver_hold_reset = transceiver_control[0];
+
+    xpm_cdc_single #(
+        .DEST_SYNC_FF(4),
+        .INIT_SYNC_FF(0))
+    sys_clk_rst_cdc (
+        .dest_out(transceiver_hold_reset),
+        .dest_clk(freerun_clk), // okClk
+        .src_clk(wb_clk), // sys_clk
+        .src_in(transceiver_control[0]));
+
     assign gt_tx_reset_pll_datapath = transceiver_control[1];
     assign gt_rx_reset_pll_datapath = transceiver_control[2];
     assign gt_rx_reset_datapath = transceiver_control[3];
@@ -369,7 +378,7 @@ module sfpp1_eth_10g_axis
         .dest_clk(wb_clk),
         .src_clk(), // Inputs are not registered
         .src_in({phy_status, transceiver_status}));
-        
+
     xpm_cdc_array_single #(
         .DEST_SYNC_FF(4),
         .INIT_SYNC_FF(0),
