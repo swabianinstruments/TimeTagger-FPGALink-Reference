@@ -186,8 +186,8 @@ sys_clk_rst_cdc (
     ) wb_master_core (
         .okClk(okClk),
         .okRst(okRst),
-        .sys_clk(sys_clk),
-        .sys_clk_rst(sys_clk_rst),
+        .wb_clk(sys_clk),
+        .wb_rst(sys_clk_rst),
         .ep_write(ep_write),
         .wr_strobe(wr_strobe),
         .data_i(pipein_fifo_data),
@@ -410,9 +410,6 @@ sys_clk_rst_cdc (
      (
       .clk(sys_clk),
       .rst(sys_clk_rst),
-
-      .usr_clk(sys_clk),
-      .usr_rst(sys_clk_rst),
 
       .s_axis_tready(data_stream_tready),
       .s_axis_tvalid(data_stream_tvalid),

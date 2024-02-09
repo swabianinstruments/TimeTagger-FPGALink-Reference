@@ -31,8 +31,8 @@ module wb_master #
     input  wire                         okClk,
     input  wire                         okRst,
 
-    input  wire                         sys_clk,
-    input  wire                         sys_clk_rst,
+    input  wire                         wb_clk,
+    input  wire                         wb_rst,
 
     // interfaces to OKBTPipeIn
     input  wire                         ep_write,       // valid signal associated with the input data comes from okBTPipeIn
@@ -99,7 +99,7 @@ xpm_fifo_async #(
 xpm_fifo_async_input (
     .rst            (okRst              ),
     .wr_clk         (okClk              ),
-    .rd_clk         (sys_clk            ),
+    .rd_clk         (wb_clk             ),
     .empty          (fifo1_empty        ),
     .full           (fifo1_full         ),
     .prog_empty     (fifo1_prog_empty   ),
@@ -129,8 +129,8 @@ xpm_fifo_async #(
    .WRITE_DATA_WIDTH    (WORD_SIZE          )
 )
 xpm_fifo_async_output (
-    .rst            (sys_clk_rst        ),
-    .wr_clk         (sys_clk            ),
+    .rst            (wb_rst             ),
+    .wr_clk         (wb_clk             ),
     .rd_clk         (okClk              ),
     .empty          (fifo2_empty        ),
     .full           (fifo2_full         ),
@@ -202,11 +202,11 @@ logic [WORD_SIZE - 1  : 0]  non_modified_data;   // data read from wb before bei
 logic [WORD_SIZE - 1  : 0]  modified_data;       // modified data
 
 // connecting the wb_master clock and reset ports to the input clk and rst ports
-assign wb_master.clk      = sys_clk;
-assign wb_master.rst      = sys_clk_rst;
+assign wb_master.clk      = wb_clk;
+assign wb_master.rst      = wb_rst;
 
-always_ff @(posedge sys_clk) begin
-    if (sys_clk_rst) begin
+always_ff @(posedge wb_clk) begin
+    if (wb_rst) begin
         input_state         <= COMMAND_EXTRACTION;
         fifo1_rd_en         <= 0;
         timeout_flag        <= 0;
