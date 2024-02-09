@@ -106,18 +106,18 @@ module xem8320_reference_qsfp #(
     // --------------- Generating sys_clk- --------------- //
     // --------------------------------------------------- //
 
-wire sys_clk, sys_clk_locked;
-clk_core clk_core_inst (sys_clk, sys_clk_locked, sys_clkp, sys_clkn);
+    wire sys_clk, sys_clk_locked;
+    clk_core clk_core_inst (sys_clk, sys_clk_locked, sys_clkp, sys_clkn);
 
-wire sys_clk_rst;
-xpm_cdc_single #(
-    .DEST_SYNC_FF(4),
-    .INIT_SYNC_FF(0))
-sys_clk_rst_cdc (
-    .dest_out(sys_clk_rst),
-    .dest_clk(sys_clk),
-    .src_clk(),
-    .src_in(okRst || !sys_clk_locked));
+    wire sys_clk_rst;
+    xpm_cdc_single #(
+        .DEST_SYNC_FF(4),
+        .INIT_SYNC_FF(0))
+    sys_clk_rst_cdc (
+        .dest_out(sys_clk_rst),
+        .dest_clk(sys_clk),
+        .src_clk(),
+        .src_in(okRst || !sys_clk_locked));
     // --------------------------------------------------- //
     // ---------- WISHBONE CROSSBAR & OK BRIDGE -----------//
     // --------------------------------------------------- //
