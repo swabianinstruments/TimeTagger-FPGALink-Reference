@@ -9,6 +9,7 @@
  * Authors:
  * - 2023 David Sawatzke <david@swabianinstruments.com>
  * - 2023 Markus Wick <markus@swabianinstruments.com>
+ * - 2024 Ehsan Jokar <ehsan@swabianinstruments.com>
  *
  * This file is provided under the terms and conditions of the BSD 3-Clause
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -65,8 +66,6 @@ module user_sample #(
      // 1 for a valid event, 0 for no event
      input wire [WORD_WIDTH-1:0] s_axis_tkeep,
 
-     input wire                  wb_clk,
-     input wire                  wb_rst,
      input wire [7:0]            wb_adr_i,
      input wire [31:0]           wb_dat_i,
      input wire                  wb_we_i,
@@ -119,31 +118,11 @@ always @(posedge clk) begin
      end
 end
 
-reg [31:0]  user_control_wb;
-reg [4:0]   channel_select_wb;
-reg [63:0]  lower_bound_wb;
-reg [63:0]  upper_bound_wb;
-wire [63:0] failed_wb;
-wire [31:0] user_control;
-wire [4:0]  channel_select;
-wire [63:0] lower_bound;
-wire [63:0] upper_bound;
+reg [31:0] user_control;
+reg [4:0]  channel_select;
+reg [63:0] lower_bound;
+reg [63:0] upper_bound;
 reg [63:0]  failed;
-
-xpm_cdc_array_single #(
-     .WIDTH($bits({user_control_wb, channel_select_wb, lower_bound_wb, upper_bound_wb})))
-user_wb_in (
-     .dest_out({user_control, channel_select, lower_bound, upper_bound}),
-     .dest_clk(clk),
-     .src_clk(wb_clk),
-     .src_in({user_control_wb, channel_select_wb, lower_bound_wb, upper_bound_wb}));
-xpm_cdc_array_single #(
-     .WIDTH($bits({failed})))
-user_wb_out (
-     .dest_out({failed_wb}),
-     .dest_clk(wb_clk),
-     .src_clk(clk),
-     .src_in({failed}));
 
 reg [63:0] tagtimes             [WORD_WIDTH-1:0];
 reg        tagtimes_valid       [WORD_WIDTH-1:0];
@@ -231,23 +210,23 @@ always @(posedge clk) begin
      end
 end
 
-always @(posedge wb_clk) begin
+always @(posedge clk) begin
      wb_ack_o <= 0;
-     if (wb_rst) begin
+     if (rst) begin
           wb_dat_o <= 0;
-          user_control_wb <= 0;
-          channel_select_wb <= 0;
-          lower_bound_wb <= 64'h0000000000330000;
-          upper_bound_wb <= 64'h0000000000340000;
+          user_control <= 0;
+          channel_select <= 0;
+          lower_bound <= 64'h0000000000330000;
+          upper_bound <= 64'h0000000000340000;
      end else if (wb_cyc_i && wb_stb_i) begin
           wb_ack_o <= 1;
           if (wb_we_i) begin
                // Write
                unique casez (wb_adr_i)
-                    8'b000010??: user_control_wb <= wb_dat_i;
-                    8'b000011??: channel_select_wb <= wb_dat_i;
-                    8'b00010???: lower_bound_wb[(wb_adr_i & 4) * 8 +: 32] <= wb_dat_i;
-                    8'b00011???: upper_bound_wb[(wb_adr_i & 4) * 8 +: 32] <= wb_dat_i;
+                    8'b000010??: user_control <= wb_dat_i;
+                    8'b000011??: channel_select <= wb_dat_i;
+                    8'b00010???: lower_bound[(wb_adr_i & 4) * 8 +: 32] <= wb_dat_i;
+                    8'b00011???: upper_bound[(wb_adr_i & 4) * 8 +: 32] <= wb_dat_i;
                     default: ;
                endcase
           end else begin
@@ -255,11 +234,11 @@ always @(posedge wb_clk) begin
                unique casez (wb_adr_i)
                     // Indicate the bus slave is present in the design
                     8'b000000??: wb_dat_o <= 1;
-                    8'b000010??: wb_dat_o <= user_control_wb;
-                    8'b000011??: wb_dat_o <= channel_select_wb;
-                    8'b00010???: wb_dat_o <= lower_bound_wb[(wb_adr_i & 4) * 8 +: 32];
-                    8'b00011???: wb_dat_o <= upper_bound_wb[(wb_adr_i & 4) * 8 +: 32];
-                    8'b00100???: wb_dat_o <= failed_wb[(wb_adr_i & 4) * 8 +: 32];
+                    8'b000010??: wb_dat_o <= user_control;
+                    8'b000011??: wb_dat_o <= channel_select;
+                    8'b00010???: wb_dat_o <= lower_bound[(wb_adr_i & 4) * 8 +: 32];
+                    8'b00011???: wb_dat_o <= upper_bound[(wb_adr_i & 4) * 8 +: 32];
+                    8'b00100???: wb_dat_o <= failed[(wb_adr_i & 4) * 8 +: 32];
                     default: wb_dat_o <= 32'h00000000;
                endcase
           end

@@ -7,7 +7,8 @@
  * Copyright (C) 2023 Swabian Instruments, All Rights Reserved
  *
  * Authors:
- * - 2023 Ehsan Jokar <ehsan@swabianinstruments.com>
+ * - 2023-2024 Ehsan Jokar <ehsan@swabianinstruments.com>
+ * - 2023-2024 Markus Wick <markus@swabianinstruments.com>
  *
  * This file is provided under the terms and conditions of the BSD 3-Clause
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -27,8 +28,11 @@ module wb_master #
     parameter TIMER_SIZE        = $clog2(TIME_OUT_VAL)
 )
 (
-    input  wire                         clk,
-    input  wire                         rst,
+    input  wire                         okClk,
+    input  wire                         okRst,
+
+    input  wire                         sys_clk,
+    input  wire                         sys_clk_rst,
 
     // interfaces to OKBTPipeIn
     input  wire                         ep_write,       // valid signal associated with the input data comes from okBTPipeIn
@@ -81,7 +85,8 @@ logic fifo1_rd_en;
 logic [WORD_SIZE - 1 : 0] fifo1_dout;
 
 // input FIFO: used to store data comes from okBTPipeIn
-xpm_fifo_sync #(
+xpm_fifo_async #(
+   .CDC_SYNC_STAGES     (2                  ),
    .FIFO_MEMORY_TYPE    ("auto"             ),
    .FIFO_WRITE_DEPTH    (FIFO_IN_SIZE       ),
    .PROG_EMPTY_THRESH   (10),
@@ -91,9 +96,10 @@ xpm_fifo_sync #(
    .USE_ADV_FEATURES    ("0707"             ),
    .WRITE_DATA_WIDTH    (WORD_SIZE          )
 )
-xpm_fifo_sync_input (
-    .rst            (rst                ),
-    .wr_clk         (clk                ),
+xpm_fifo_async_input (
+    .rst            (okRst              ),
+    .wr_clk         (okClk              ),
+    .rd_clk         (sys_clk            ),
     .empty          (fifo1_empty        ),
     .full           (fifo1_full         ),
     .prog_empty     (fifo1_prog_empty   ),
@@ -112,7 +118,8 @@ logic fifo2_data_valid, fifo2_wt_en;
 logic [WORD_SIZE - 1 : 0] fifo2_din;
 
 // output FIFO: used to store data send to okBTPipeOut
-xpm_fifo_sync #(
+xpm_fifo_async #(
+   .CDC_SYNC_STAGES     (2                  ),
    .FIFO_MEMORY_TYPE    ("auto"             ),
    .FIFO_WRITE_DEPTH    (FIFO_IN_SIZE       ),
    .PROG_EMPTY_THRESH   (4 - 1              ), // Asserted "at or below" this value
@@ -121,9 +128,10 @@ xpm_fifo_sync #(
    .USE_ADV_FEATURES    ("1707"             ),
    .WRITE_DATA_WIDTH    (WORD_SIZE          )
 )
-xpm_fifo_sync_output (
-    .rst            (rst                ),
-    .wr_clk         (clk                ),
+xpm_fifo_async_output (
+    .rst            (sys_clk_rst        ),
+    .wr_clk         (sys_clk            ),
+    .rd_clk         (okClk              ),
     .empty          (fifo2_empty        ),
     .full           (fifo2_full         ),
     .prog_empty     (fifo2_prog_empty   ),
@@ -194,11 +202,11 @@ logic [WORD_SIZE - 1  : 0]  non_modified_data;   // data read from wb before bei
 logic [WORD_SIZE - 1  : 0]  modified_data;       // modified data
 
 // connecting the wb_master clock and reset ports to the input clk and rst ports
-assign wb_master.clk      = clk;
-assign wb_master.rst      = rst;
+assign wb_master.clk      = sys_clk;
+assign wb_master.rst      = sys_clk_rst;
 
-always_ff @(posedge clk) begin
-    if (rst) begin
+always_ff @(posedge sys_clk) begin
+    if (sys_clk_rst) begin
         input_state         <= COMMAND_EXTRACTION;
         fifo1_rd_en         <= 0;
         timeout_flag        <= 0;
