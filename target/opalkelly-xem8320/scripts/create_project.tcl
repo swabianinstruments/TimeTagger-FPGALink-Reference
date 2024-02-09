@@ -65,6 +65,7 @@ set files [list \
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/lfsr.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/sync_reset.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/axis_adapter.v"]"\
+ "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/axis_async_fifo_adapter.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/axis_async_fifo.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/axis_fifo.v"]"\
  "[file normalize "$origin_dir/3rdparty/i2c/rtl/verilog/i2c_master_top.v"]"\
@@ -81,6 +82,32 @@ set obj [get_filesets sources_1]
 add_files -norecurse -fileset $obj $files
 source "$target_dir/scripts/sfpp1_eth_10g_gth.tcl"
 set_property "top" "xem8320_reference" $obj
+
+# Generating MMCM ###########################################################
+create_ip -name clk_wiz -vendor xilinx.com -library ip -version 6.0 -module_name clk_core
+set_property -dict [list \
+  CONFIG.CLKOUT1_DRIVES {BUFG} \
+  CONFIG.CLKOUT1_JITTER {104.542} \
+  CONFIG.CLKOUT1_PHASE_ERROR {98.575} \
+  CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {333.33333} \
+  CONFIG.CLKOUT2_DRIVES {Buffer} \
+  CONFIG.CLKOUT3_DRIVES {Buffer} \
+  CONFIG.CLKOUT4_DRIVES {Buffer} \
+  CONFIG.CLKOUT5_DRIVES {Buffer} \
+  CONFIG.CLKOUT6_DRIVES {Buffer} \
+  CONFIG.CLKOUT7_DRIVES {Buffer} \
+  CONFIG.Component_Name {clk_core} \
+  CONFIG.FEEDBACK_SOURCE {FDBK_AUTO} \
+  CONFIG.MMCM_BANDWIDTH {OPTIMIZED} \
+  CONFIG.MMCM_CLKFBOUT_MULT_F {10} \
+  CONFIG.MMCM_CLKOUT0_DIVIDE_F {3} \
+  CONFIG.MMCM_COMPENSATION {AUTO} \
+  CONFIG.PRIMITIVE {PLL} \
+  CONFIG.PRIM_SOURCE {Differential_clock_capable_pin} \
+  CONFIG.USE_RESET {false} \
+] [get_ips clk_core]
+
+generate_target  {instantiation_template synthesis}  [get_files clk_core.xci] -force
 
 # constrs_1 fileset ###########################################################
 if {[string equal [get_filesets -quiet constrs_1] ""]} {
@@ -113,6 +140,9 @@ set_property "transport_int_delay" "0" $obj
 set_property "transport_path_delay" "0" $obj
 set_property "xelab.nosort" "1" $obj
 set_property "xelab.unifast" "" $obj
+
+# utils_1 fileset #############################################################
+add_files -fileset utils_1 -norecurse "$origin_dir/3rdparty/verilog-ethernet/lib/axis/syn/vivado/axis_async_fifo.tcl"
 
 # create synth_1 run ##########################################################
 if {[string equal [get_runs -quiet synth_1] ""]} {
@@ -149,6 +179,8 @@ set_property "steps.write_bitstream.args.verbose" "0" $obj
 
 # set the current impl run
 current_run -implementation [get_runs impl_1]
+# Add CDC constraints for axis_async_fifos
+set_property STEPS.INIT_DESIGN.TCL.POST [ get_files axis_async_fifo.tcl -of [get_fileset utils_1] ] [get_runs impl_1]
 
 puts "Successfully created project ${project_name}!"
 exit

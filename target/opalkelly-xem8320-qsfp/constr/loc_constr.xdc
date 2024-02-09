@@ -38,7 +38,3 @@ set_property IOSTANDARD LVCMOS33 [get_ports sfpp1_tx_disable]
 set_property PACKAGE_PIN C13 [get_ports sfpp1_tx_disable]
 set_property IOSTANDARD LVCMOS33 [get_ports sfpp1_tx_fault]
 set_property PACKAGE_PIN C14 [get_ports sfpp1_tx_fault]
-
-############################################################################
-# OK clock stuff
-set_property CLOCK_DEDICATED_ROUTE BACKBONE [get_nets sys_clk_BUFG]

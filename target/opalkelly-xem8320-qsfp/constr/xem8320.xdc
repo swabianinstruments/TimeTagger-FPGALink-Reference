@@ -1,7 +1,7 @@
 ############################################################################
 # XEM8320 - Xilinx constraints file
 #
-# Pin mappings for the XEM8320.  Use this as a template and comment out 
+# Pin mappings for the XEM8320.  Use this as a template and comment out
 # the pins that are not used in your design.  (By default, map will fail
 # if this file contains constraints for signals not in your design).
 #
@@ -93,8 +93,7 @@ set_property IOSTANDARD LVDS [get_ports {sys_clkp}]
 set_property PACKAGE_PIN U24 [get_ports {sys_clkn}]
 set_property IOSTANDARD LVDS [get_ports {sys_clkn}]
 
-create_clock -name sys_clk -period 10 [get_ports sys_clkp]
-set_clock_groups -asynchronous -group [get_clocks {sys_clk}] -group [get_clocks {mmcm0_clk0 okUH0}]
+create_clock -period 10 [get_ports sys_clkp]
 
 # LEDS #####################################################################
 set_property PACKAGE_PIN G19 [get_ports {led[0]}]
@@ -111,4 +110,3 @@ set_property IOSTANDARD LVCMOS12 [get_ports {led[*]}]
 set_property PACKAGE_PIN P19 [get_ports {reset}]
 set_property IOSTANDARD LVCMOS18 [get_ports {reset}]
 set_property SLEW FAST [get_ports {reset}]
-
