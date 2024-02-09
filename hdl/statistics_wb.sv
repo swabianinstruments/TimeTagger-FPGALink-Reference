@@ -43,7 +43,7 @@ module si_statistics_wb
   #(
     parameter DATA_WIDTH = 128,
     parameter KEEP_WIDTH = (DATA_WIDTH + 7) / 8,
-    parameter ETH_CLK_FREQ = 156250000)
+    parameter SYS_CLK_FREQ = 333333333)
    (
     input wire                  eth_clk,
     input wire                  eth_rst,
@@ -98,7 +98,7 @@ module si_statistics_wb
 
    always @(posedge eth_clk) begin
       if (eth_rst) begin
-         second_timer <= ETH_CLK_FREQ - 1;
+         second_timer <= SYS_CLK_FREQ - 1;
          second_timer <= 0;
          invalid_packet_counter <= 0;
          overflow <= 0;
@@ -147,7 +147,7 @@ module si_statistics_wb
          end
 
          if (second_timer == 0) begin
-            second_timer <= ETH_CLK_FREQ - 1;
+            second_timer <= SYS_CLK_FREQ - 1;
 
             // Latch & reset the rate counters
             tag_rate_latched <= tag_rate_counter;
