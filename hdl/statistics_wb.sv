@@ -8,6 +8,7 @@
  *
  * Authors:
  * - 2022-2024 David Sawatzke <david@swabianinstruments.com>
+ * - 2024 Ehsan Jokar <ehsan@swabianinstruments.com>
  *
  * This file is provided under the terms and conditions of the BSD 3-Clause
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -43,10 +44,10 @@ module si_statistics_wb
   #(
     parameter DATA_WIDTH = 128,
     parameter KEEP_WIDTH = (DATA_WIDTH + 7) / 8,
-    parameter SYS_CLK_FREQ = 333333333)
+    parameter CLK_FREQ   = 333333333)
    (
-    input wire                  eth_clk,
-    input wire                  eth_rst,
+    input wire                  clk,
+    input wire                  rst,
 
    // AXI-Stream before the header parser
     input wire                  pre_axis_tvalid,
@@ -65,8 +66,6 @@ module si_statistics_wb
     input wire                  post_axis_tlast,
 
     // Wishbone interface for control & status
-    input wire                  wb_clk,
-    input wire                  wb_rst,
     input wire [7:0]            wb_adr_i,
     input wire [31:0]           wb_dat_i,
     input wire                  wb_we_i,
@@ -96,9 +95,9 @@ module si_statistics_wb
    reg                 reset_total_counters;
 
 
-   always @(posedge eth_clk) begin
-      if (eth_rst) begin
-         second_timer <= SYS_CLK_FREQ - 1;
+   always @(posedge clk) begin
+      if (rst) begin
+         second_timer <= CLK_FREQ - 1;
          second_timer <= 0;
          invalid_packet_counter <= 0;
          overflow <= 0;
@@ -147,7 +146,7 @@ module si_statistics_wb
          end
 
          if (second_timer == 0) begin
-            second_timer <= SYS_CLK_FREQ - 1;
+            second_timer <= CLK_FREQ - 1;
 
             // Latch & reset the rate counters
             tag_rate_latched <= tag_rate_counter;
@@ -164,49 +163,20 @@ module si_statistics_wb
       end
    end
 
-   reg [31:0]          invalid_packet_counter_wb;
-   reg [31:0]          size_of_last_packet_wb;
-   reg [31:0]          tag_rate_wb;
-   reg [31:0]          word_rate_wb;
-   reg [31:0]          packet_rate_wb;
-   reg [31:0]          received_tags_wb;
-   reg [31:0]          received_words_wb;
-   reg [31:0]          received_packets_wb;
-   reg                 lost_packet_wb;
-   reg                 overflow_wb;
-
    reg                 packet_loss;
    reg                 overflowed;
 
-   reg [31:0]          statistics_control_wb;
+   reg [31:0]          statistics_control;
    reg [31:0]          statistics_reset;
 
-   // This isn't a great module for this purpose, because inter-bit dependencies aren't maintained.
-   // This doesn't serve any critical function, so that's acceptable
-   xpm_cdc_array_single #(
-                          .DEST_SYNC_FF(4),
-                          .INIT_SYNC_FF(0),
-                          .SIM_ASSERT_CHK(0),
-                          // Do not register inputs (required for asynchronous signals)
-                          .SRC_INPUT_REG(1),
-                          .WIDTH($bits({invalid_packet_counter, size_of_last_packet, tag_rate_latched, word_rate_latched, packet_rate_latched, received_tags, received_words, received_packets})))
-   status_cdc (
-                            .dest_out({invalid_packet_counter_wb, size_of_last_packet_wb, tag_rate_wb, word_rate_wb, packet_rate_wb, received_tags_wb, received_words_wb, received_packets_wb}),
-                            .dest_clk(wb_clk),
-                            .src_clk(eth_clk),
-                            .src_in({invalid_packet_counter, size_of_last_packet, tag_rate_latched, word_rate_latched, packet_rate_latched, received_tags, received_words, received_packets}));
+   assign reset_total_counters = statistics_reset[0];
 
-   xpm_cdc_pulse #(.RST_USED(0)) packet_loss_cdc (.dest_clk(wb_clk), .src_clk(eth_clk), .dest_pulse(lost_packet_wb), .src_pulse(lost_packet));
-   xpm_cdc_pulse #(.RST_USED(0)) overflow_cdc (.dest_clk(wb_clk), .src_clk(eth_clk), .dest_pulse(overflow_wb), .src_pulse(overflow));
-   xpm_cdc_handshake #(.DEST_EXT_HSK(0))reset_total_counters_cdc (.dest_clk(eth_clk), .src_clk(wb_clk), .src_send(statistics_reset[0]), .dest_req(reset_total_counters));
-
-
-   always @(posedge wb_clk) begin
+   always @(posedge clk) begin
       wb_ack_o <= 0;
       statistics_reset <= 0;
-      if (wb_rst) begin
+      if (rst) begin
          wb_dat_o <= 0;
-         statistics_control_wb <= 0;
+         statistics_control <= 0;
          statistics_reset <= 0;
          packet_loss <= 0;
          overflowed <= 0;
@@ -215,7 +185,7 @@ module si_statistics_wb
          if (wb_we_i) begin
             // Write
             casez (wb_adr_i)
-              8'b000001??: statistics_control_wb <= wb_dat_i;
+              8'b000001??: statistics_control <= wb_dat_i;
               8'b000010??: statistics_reset <= wb_dat_i;
             endcase
          end else begin
@@ -223,17 +193,17 @@ module si_statistics_wb
             casez (wb_adr_i)
               // Indicate the Debug bus slave is present in the design
               8'b000000??: wb_dat_o <= 1;
-              8'b000001??: wb_dat_o <= statistics_control_wb;
+              8'b000001??: wb_dat_o <= statistics_control;
               //8'b000010??: wb_data_o <= ; // Unused
-              8'b000011??: wb_dat_o <= packet_rate_wb;
-              8'b000100??: wb_dat_o <= word_rate_wb;
-              8'b000101??: wb_dat_o <= received_packets_wb;
-              8'b000110??: wb_dat_o <= received_words_wb;
-              8'b000111??: wb_dat_o <= size_of_last_packet_wb;
+              8'b000011??: wb_dat_o <= packet_rate_latched;
+              8'b000100??: wb_dat_o <= word_rate_latched;
+              8'b000101??: wb_dat_o <= received_packets;
+              8'b000110??: wb_dat_o <= received_words;
+              8'b000111??: wb_dat_o <= size_of_last_packet;
               8'b001000??: wb_dat_o <= packet_loss;
-              8'b001001??: wb_dat_o <= invalid_packet_counter_wb;
-              8'b001010??: wb_dat_o <= tag_rate_wb;
-              8'b001011??: wb_dat_o <= received_tags_wb;
+              8'b001001??: wb_dat_o <= invalid_packet_counter;
+              8'b001010??: wb_dat_o <= tag_rate_latched;
+              8'b001011??: wb_dat_o <= received_tags;
               8'b001100??: wb_dat_o <= overflowed;
               default: wb_dat_o <= 32'h00000000;
             endcase
@@ -242,12 +212,12 @@ module si_statistics_wb
          wb_dat_o <= 0;
       end
 
-      if (lost_packet_wb) begin
+      if (lost_packet) begin
           packet_loss <= 1;
       end else if (statistics_reset[1]) begin
           packet_loss <= 0;
       end
-      if (overflow_wb) begin
+      if (overflow) begin
           overflowed <= 1;
       end else if (statistics_reset[2]) begin
           overflowed <= 0;

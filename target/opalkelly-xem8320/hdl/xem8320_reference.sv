@@ -102,7 +102,26 @@ module xem8320_reference #(
         .dest_clk(okClk),
         .src_rst(reset));
 
-    // ---------- WISHBONE CROSSBAR & OK BRIDGE ----------
+    // --------------------------------------------------- //
+    // --------------- Generating sys_clk- --------------- //
+    // --------------------------------------------------- //
+
+    wire sys_clk, sys_clk_locked;
+    clk_core clk_core_inst (sys_clk, sys_clk_locked, sys_clkp, sys_clkn);
+
+    wire sys_clk_rst;
+    xpm_cdc_single #(
+        .DEST_SYNC_FF(4),
+        .INIT_SYNC_FF(0))
+    sys_clk_rst_cdc (
+        .dest_out(sys_clk_rst),
+        .dest_clk(sys_clk),
+        .src_clk(),
+        .src_in(okRst || !sys_clk_locked));
+    // --------------------------------------------------- //
+    // ---------- WISHBONE CROSSBAR & OK BRIDGE -----------//
+    // --------------------------------------------------- //
+
     // Wishbone crossbar to connect the various design components
     wb_interface #(.SLAVES(5)) wb();
     // Always ACK Machine (required for the wb_pipe_bridge)
@@ -119,8 +138,8 @@ module xem8320_reference #(
     assign wb.slave_wb_adr[4]  = 24'b100000000000000001010010;
 
     // Wishbone Always ACK Machine, required for OpalKelly Pipe-based Wishbone Bridge
-    always @(posedge okClk) begin
-        if (okRst) begin
+    always @(posedge sys_clk) begin
+        if (sys_clk_rst) begin
             wb.slave_ack_o[0] <= 1'b0;
             wb.slave_dat_o[0] <= 32'b0;
         end else if (wb.slave_cyc_i[0] && wb.slave_stb_i[0]) begin
@@ -140,23 +159,23 @@ module xem8320_reference #(
     wire        ep_read;
 
     okBTPipeIn okBTPipeIn_83 (
-    .okHE(okHE),
-    .okEH(okEH_PipeIn),
-    .ep_addr(8'h83),
-    .ep_dataout(pipein_fifo_data),
-    .ep_write(ep_write),
-    .ep_blockstrobe(wr_strobe),
-    .ep_ready(receive_ready)
+      .okHE(okHE),
+      .okEH(okEH_PipeIn),
+      .ep_addr(8'h83),
+      .ep_dataout(pipein_fifo_data),
+      .ep_write(ep_write),
+      .ep_blockstrobe(wr_strobe),
+      .ep_ready(receive_ready)
     );
 
     okBTPipeOut okBTPipeOut_A4 (
-    .okHE(okHE),
-    .okEH(okEH_PipeOut),
-    .ep_addr(8'ha4),
-    .ep_datain(pipeout_fifo_data),
-    .ep_read(ep_read),
-    .ep_blockstrobe(rd_strobe),
-    .ep_ready(send_ready)
+      .okHE(okHE),
+      .okEH(okEH_PipeOut),
+      .ep_addr(8'ha4),
+      .ep_datain(pipeout_fifo_data),
+      .ep_read(ep_read),
+      .ep_blockstrobe(rd_strobe),
+      .ep_ready(send_ready)
     );
 
     wb_master #(
@@ -165,8 +184,10 @@ module xem8320_reference #(
         .TIME_OUT_VAL(8*1024*1024)
 
     ) wb_master_core (
-        .clk(okClk),
-        .rst(okRst),
+        .okClk(okClk),
+        .okRst(okRst),
+        .wb_clk(sys_clk),
+        .wb_rst(sys_clk_rst),
         .ep_write(ep_write),
         .wr_strobe(wr_strobe),
         .data_i(pipein_fifo_data),
@@ -203,8 +224,8 @@ module xem8320_reference #(
         .T(sfpp1_i2c_sda_out_en));
 
     i2c_master_top i2c_sfpp (
-        .wb_clk_i(okClk),
-        .wb_rst_i(okRst),
+        .wb_clk_i(sys_clk),
+        .wb_rst_i(sys_clk_rst),
         .arst_i(1),
         .wb_adr_i(wb.slave_adr_i[2:0]),
         .wb_dat_i(wb.slave_dat_i),
@@ -220,21 +241,6 @@ module xem8320_reference #(
         .sda_pad_i(sfpp1_i2c_sda_in),
         .sda_pad_o(sfpp1_i2c_sda_out),
         .sda_padoen_o(sfpp1_i2c_sda_out_en));
-
-    // ------------------------ Generating sys_clk ------------------------
-
-    wire sys_clk, sys_clk_locked;
-    clk_core clk_core_inst (sys_clk, sys_clk_locked, sys_clkp, sys_clkn);
-
-    wire sys_clk_rst;
-    xpm_cdc_single #(
-        .DEST_SYNC_FF(4),
-        .INIT_SYNC_FF(0))
-    sys_clk_rst_cdc (
-        .dest_out(sys_clk_rst),
-        .dest_clk(sys_clk),
-        .src_clk(),
-        .src_in(okRst || !sys_clk_locked));
 
     // ---------------------------- localparams --------------------------------
     localparam GT_WORD_WIDTH = 2; // 2 ==> 10G, 4 ==> 40G
@@ -288,8 +294,8 @@ module xem8320_reference #(
 
     // Transceiver + PHY
     sfpp1_eth_10g_axis sfpp1_eth_10g_axis_inst (
-        .wb_clk(okClk),
-        .wb_rst(okRst),
+        .wb_clk(sys_clk),
+        .wb_rst(sys_clk_rst),
         .wb_adr_i(wb.slave_adr_i[7:0]),
         .wb_dat_i(wb.slave_dat_i),
         .wb_dat_o(wb.slave_dat_o[2]),
@@ -402,11 +408,8 @@ module xem8320_reference #(
    // Decoding of the FPGA-link protocol
    si_data_channel #(.DATA_WIDTH_IN(DC_DATA_WIDTH), .DATA_WIDTH_OUT(TC_DATA_WIDTH), .STATISTICS(1)) data_channel
      (
-      .eth_clk(sys_clk),
-      .eth_rst(sys_clk_rst),
-
-      .usr_clk(sys_clk),
-      .usr_rst(sys_clk_rst),
+      .clk(sys_clk),
+      .rst(sys_clk_rst),
 
       .s_axis_tready(data_stream_tready),
       .s_axis_tvalid(data_stream_tvalid),
@@ -421,8 +424,6 @@ module xem8320_reference #(
       .m_axis_tkeep(tag_stream_tkeep),
       .m_axis_tuser(tag_stream_tuser),
 
-      .wb_clk(okClk),
-      .wb_rst(okRst),
       .wb_adr_i(wb.slave_adr_i[7:0]),
       .wb_dat_i(wb.slave_dat_i),
       .wb_dat_o(wb.slave_dat_o[3]),
@@ -475,8 +476,6 @@ module xem8320_reference #(
       .s_axis_tagtime(user_sample_inp_tagtime),
       .s_axis_rising_edge(user_sample_inp_rising_edge),
 
-      .wb_clk(okClk),
-      .wb_rst(okRst),
       .wb_adr_i(wb.slave_adr_i[7:0]),
       .wb_dat_i(wb.slave_dat_i),
       .wb_dat_o(wb.slave_dat_o[4]),
