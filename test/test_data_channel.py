@@ -60,11 +60,9 @@ async def data_channel_testbench(dut, packets=[]):
         delay = Timer(2, units="ns")
         await delay
         while True:
-            dut.eth_clk.value = 1
-            dut.usr_clk.value = 1
+            dut.clk.value = 1
             await delay
-            dut.eth_clk.value = 0
-            dut.usr_clk.value = 0
+            dut.clk.value = 0
             await delay
     # Start the clock
     cocotb.start_soon(custom_clock())
@@ -79,26 +77,23 @@ async def data_channel_testbench(dut, packets=[]):
     dut.m_axis_tready.value = 0
 
     # Reset the simulation, propagating these idle signals
-    dut.eth_rst.setimmediatevalue(0)
-    dut.usr_rst.setimmediatevalue(0)
-    await RisingEdge(dut.eth_clk)
-    await RisingEdge(dut.eth_clk)
-    dut.eth_rst.value = 1
-    dut.usr_rst.value = 1
-    await RisingEdge(dut.eth_clk)
-    await RisingEdge(dut.eth_clk)
-    dut.eth_rst.value = 0
-    dut.usr_rst.value = 0
-    await RisingEdge(dut.eth_clk)
-    await RisingEdge(dut.eth_clk)
+    dut.rst.setimmediatevalue(0)
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    dut.rst.value = 1
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    dut.rst.value = 0
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
     # Instantiate a collector for the resulting AXI bus
-    axis_sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "m_axis"), dut.usr_clk, dut.usr_rst)
+    axis_sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "m_axis"), dut.clk, dut.rst)
     axis_sink.log.setLevel(logging.INFO)
 
     # Instantiate an AxiStreamSource for the TX AXI bus
     axis_source = AxiStreamSource(
-        AxiStreamBus.from_prefix(dut, "s_axis"), dut.eth_clk, dut.eth_rst
+        AxiStreamBus.from_prefix(dut, "s_axis"), dut.clk, dut.rst
     )
     axis_source.log.setLevel(logging.INFO)
 
@@ -116,9 +111,9 @@ async def data_channel_testbench(dut, packets=[]):
     for _ in range(len(packets)):
         # We must wait for a packet to be ready before we receive it
         while axis_sink.empty():
-            await RisingEdge(dut.usr_clk)
+            await RisingEdge(dut.clk)
 
-        
+
         p = await axis_sink.recv()
         recv_packets += [p]
 
@@ -132,7 +127,7 @@ async def data_channel_testbench(dut, packets=[]):
         for (tb, rb) in zip(tag_bytes, rp.tdata):
             assert tb == rb
         assert pc["wrap_count"] == rp.tuser
-    
+
 
 def test_data_channel():
     tests_dir = Path(__file__).parent
