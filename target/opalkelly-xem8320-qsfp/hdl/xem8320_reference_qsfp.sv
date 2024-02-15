@@ -291,6 +291,9 @@ module xem8320_reference_qsfp #(
     wire [GT_KEEP_WIDTH-1:0] eth_axis_rx_tkeep;
 
     assign eth_axis_tx_tvalid = 0;
+    assign eth_axis_tx_tdata = 0;
+    assign eth_axis_tx_tkeep = 0;
+    assign eth_axis_tx_tlast = 0;
 
     // Transceiver + PHY
     sfpp1_eth_10g_axis sfpp1_eth_10g_axis_inst (
