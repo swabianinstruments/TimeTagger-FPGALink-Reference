@@ -8,8 +8,8 @@ Ethernet Time Tagger FPGA link interfaces.
 
 Building this project requires a recent Version of Vivado. The FPGA is supported
 by the Standard Version, but a Xilinx `EF-DI-LAUI-SITE` IP core license is
-required.  The project has been tested to work with Vivado 2022.2 on an Ubuntu
-20.04 Workstation installation. First up, generate some verilog sources by
+required.  The project has been tested to work with Vivado 2023.1 on an Ubuntu
+22.04 Workstation installation. First up, generate some verilog sources by
 executing `make` in the root directory like so:
 
 ``` sh
@@ -28,11 +28,12 @@ the Xilinx Vivado project can then be created by running:
 ```
 si@ubuntu:target/opalkelly-xem8320-qsfp$ make project
 vivado -mode tcl -source scripts/create_project.tcl
-
-****** Vivado v2022.1 (64-bit)
-  **** SW Build 3526262 on Mon Apr 18 15:47:01 MDT 2022
-  **** IP Build 3524634 on Mon Apr 18 20:55:01 MDT 2022
+****** Vivado v2023.1 (64-bit)
+  **** SW Build 3865809 on Sun May  7 15:04:56 MDT 2023
+  **** IP Build 3864474 on Sun May  7 20:36:21 MDT 2023
+  **** SharedData Build 3865790 on Sun May 07 13:33:03 MDT 2023
     ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
 
 [... output suppressed ...]
 
@@ -40,7 +41,7 @@ vivado -mode tcl -source scripts/create_project.tcl
 # puts "Successfully created project ${project_name}!"
 Successfully created project xem8320-timetagger-fpgalink-reference!
 # exit
-INFO: [Common 17-206] Exiting Vivado at Thu Aug 18 17:06:44 2022...
+INFO: [Common 17-206] Exiting Vivado [..]
 ```
 
 The FPGA bitstream can be built from within Vivado by opening the generated
@@ -72,8 +73,8 @@ configure the voltage rails accordingly in SmartVIO hybrid mode. This script
 must be executed from within the `host` subdirectory, as illustrated below:
 
 ``` sh
-si@ubuntu:target/opalkelly-xem8350$ pushd host
-si@ubuntu:target/opalkelly-xem8350/host$ python -m device_settings configure
+si@ubuntu:target/opalkelly-xem8320-qsfp$ pushd host
+si@ubuntu:target/opalkelly-xem8320-qsfp/host$ python -m device_settings configure
 Connected to device Opal Kelly XEM8320 with serial 0123456789!
          Product: XEM8320-AU25P
 Firmware version: 1.39
@@ -83,7 +84,7 @@ Setting XEM8320_SMARTVIO_MODE to 0x01
 Setting XEM8320_VIO1_VOLTAGE to 120
 Setting XEM8320_VIO2_VOLTAGE to 330
 Saved settings.
-si@ubuntu:target/opalkelly-xem8350/host$ popd
+si@ubuntu:target/opalkelly-xem8320-qsfp/host$ popd
 ```
 
 These settings are only applied after a power-cycle of the XEM8320-board.
@@ -109,7 +110,7 @@ Diagnostics:
   size_of_last_packet     (Words (128 bit)/Packet) :        3
   packet_loss                               (bool) :        0
   invalid_packets                        (Packets) :        0
-si@ubuntu:target/opalkelly-xem8350/host$ popd
+si@ubuntu:target/opalkelly-xem8320-qsfp/host$ popd
 ```
 
 You can also use `sfp.py` inside `../../host/` to observe the sfp state as follows:
