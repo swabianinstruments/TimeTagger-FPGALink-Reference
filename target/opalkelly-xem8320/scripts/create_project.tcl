@@ -118,6 +118,7 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 set files [list \
  "[file normalize "$target_dir/constr/xem8320.xdc"]"\
  "[file normalize "$target_dir/constr/loc_constr.xdc"]"\
+ "[file normalize "$target_dir/constr/waivers.xdc"]"\
 ]
 set obj [get_filesets constrs_1]
 add_files -norecurse -fileset $obj $files

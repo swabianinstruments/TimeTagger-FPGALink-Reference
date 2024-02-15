@@ -93,7 +93,8 @@ set_property IOSTANDARD LVDS [get_ports {sys_clkp}]
 set_property PACKAGE_PIN U24 [get_ports {sys_clkn}]
 set_property IOSTANDARD LVDS [get_ports {sys_clkn}]
 
-create_clock -period 10 [get_ports sys_clkp]
+# Already defined by the mmcm wizard
+# create_clock -period 10 [get_ports sys_clkp]
 
 # LEDS #####################################################################
 set_property PACKAGE_PIN G19 [get_ports {led[0]}]
@@ -109,4 +110,3 @@ set_property IOSTANDARD LVCMOS12 [get_ports {led[*]}]
 ############################################################################
 set_property PACKAGE_PIN P19 [get_ports {reset}]
 set_property IOSTANDARD LVCMOS18 [get_ports {reset}]
-set_property SLEW FAST [get_ports {reset}]
