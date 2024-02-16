@@ -1,16 +1,16 @@
 /**
  * XGMII to AXI4-Stream Bridge (64-bit receive side).
- * 
+ *
  * This file is part of the Time Tagger software defined digital data
  * acquisition FPGA-link reference design.
  *
  * Copyright (C) 2021-2022 Leon Schuermann <leon@is.currently.online>
  * Copyright (C) 2022 Swabian Instruments, All Rights Reserved
- * 
+ *
  * Authors:
  * - 2021-2022 Leon Schuermann <leon@is.currently.online>
  * - 2022 Leon Schuermann <leon@swabianinstruments.com>
- * 
+ *
  * This module is based on [1], licensed under the BSD-2-Clause
  * license. It has been relicensed for the purposes of inclusion into
  * this repository under the BSD 3-Clause license.
@@ -19,7 +19,7 @@
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
  *
  * SPDX-License-Identifier: BSD-3-Clause
- * 
+ *
  * [1]: https://github.com/enjoy-digital/liteeth/blob/6f0c1b6a91f058da202c745202df688bf95a6135/liteeth/phy/xgmii.py
  */
 
@@ -169,19 +169,20 @@ module xgmii_axis_bridge_rx_64b (
 
     // Receive state machine
     always @(posedge clk) begin
+        // Output default values
+        error_ready <= 0;
+        error_preamble <= 0;
+        error_xgmii <= 0;
+
+        axis_tvalid <= 0;
+        axis_tdata <= {64{1'bx}};
+        axis_tlast <= 1'bx;
+        axis_tkeep <= {8{1'bx}};
+
         if (rst) begin
             fsm_state <= FSM_IDLE;
             fsm_idle_tolerate_end <= 0;
         end else begin
-            // Output default values
-            error_ready <= 0;
-            error_preamble <= 0;
-            error_xgmii <= 0;
-
-            axis_tvalid <= 0;
-            axis_tdata <= {64{1'bx}};
-            axis_tlast <= 1'bx;
-            axis_tkeep <= {8{1'bx}};
 
             // tolerate_end and shifted_preamble are only relevant for the next
             // cycle, thus deassert it by default:
