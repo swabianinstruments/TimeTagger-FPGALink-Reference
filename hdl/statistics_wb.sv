@@ -66,13 +66,7 @@ module si_statistics_wb
     input wire                  post_axis_tlast,
 
     // Wishbone interface for control & status
-    input wire [7:0]            wb_adr_i,
-    input wire [31:0]           wb_dat_i,
-    input wire                  wb_we_i,
-    input wire                  wb_stb_i,
-    input wire                  wb_cyc_i,
-    output reg [31:0]           wb_dat_o = 0,
-    output reg                  wb_ack_o
+    wb_interface.slave          wb
     );
 
    // Timer to determine the length of a second
@@ -172,44 +166,44 @@ module si_statistics_wb
    assign reset_total_counters = statistics_reset[0];
 
    always @(posedge clk) begin
-      wb_ack_o <= 0;
+      wb.ack <= 0;
       statistics_reset <= 0;
       if (rst) begin
-         wb_dat_o <= 0;
+         wb.dat_o <= 0;
          statistics_control <= 0;
          statistics_reset <= 0;
          packet_loss <= 0;
          overflowed <= 0;
-      end else if (wb_cyc_i && wb_stb_i) begin
-         wb_ack_o <= 1;
-         if (wb_we_i) begin
+      end else if (wb.cyc && wb.stb) begin
+         wb.ack <= 1;
+         if (wb.we) begin
             // Write
-            casez (wb_adr_i)
-              8'b000001??: statistics_control <= wb_dat_i;
-              8'b000010??: statistics_reset <= wb_dat_i;
+            casez (wb.adr[7:0])
+              8'b000001??: statistics_control <= wb.dat_i;
+              8'b000010??: statistics_reset <= wb.dat_i;
             endcase
          end else begin
             // Read
-            casez (wb_adr_i)
+            casez (wb.adr[7:0])
               // Indicate the Debug bus slave is present in the design
-              8'b000000??: wb_dat_o <= 1;
-              8'b000001??: wb_dat_o <= statistics_control;
+              8'b000000??: wb.dat_o <= 1;
+              8'b000001??: wb.dat_o <= statistics_control;
               //8'b000010??: wb_data_o <= ; // Unused
-              8'b000011??: wb_dat_o <= packet_rate_latched;
-              8'b000100??: wb_dat_o <= word_rate_latched;
-              8'b000101??: wb_dat_o <= received_packets;
-              8'b000110??: wb_dat_o <= received_words;
-              8'b000111??: wb_dat_o <= size_of_last_packet;
-              8'b001000??: wb_dat_o <= packet_loss;
-              8'b001001??: wb_dat_o <= invalid_packet_counter;
-              8'b001010??: wb_dat_o <= tag_rate_latched;
-              8'b001011??: wb_dat_o <= received_tags;
-              8'b001100??: wb_dat_o <= overflowed;
-              default: wb_dat_o <= 32'h00000000;
+              8'b000011??: wb.dat_o <= packet_rate_latched;
+              8'b000100??: wb.dat_o <= word_rate_latched;
+              8'b000101??: wb.dat_o <= received_packets;
+              8'b000110??: wb.dat_o <= received_words;
+              8'b000111??: wb.dat_o <= size_of_last_packet;
+              8'b001000??: wb.dat_o <= packet_loss;
+              8'b001001??: wb.dat_o <= invalid_packet_counter;
+              8'b001010??: wb.dat_o <= tag_rate_latched;
+              8'b001011??: wb.dat_o <= received_tags;
+              8'b001100??: wb.dat_o <= overflowed;
+              default: wb.dat_o <= 32'h00000000;
             endcase
          end
       end else begin
-         wb_dat_o <= 0;
+         wb.dat_o <= 0;
       end
 
       if (lost_packet) begin

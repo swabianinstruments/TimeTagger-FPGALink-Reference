@@ -9,6 +9,7 @@
  *
  * Authors:
  * - 2022 Leon Schuermann <leon@swabianinstruments.com>
+ * - 2024 Ehsan Jokar <ehsan@swabianinstruments.com>
  *
  * This file is provided under the terms and conditions of the BSD 3-Clause
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -56,15 +57,7 @@ module sfpp1_eth_10g_axis
     input wire [7:0]   axis_tx_tkeep,
 
     // Wishbone interface for control & status
-    input wire         wb_clk,
-    input wire         wb_rst,
-    input wire [7:0]   wb_adr_i,
-    input wire [31:0]  wb_dat_i,
-    input wire         wb_we_i,
-    input wire         wb_stb_i,
-    input wire         wb_cyc_i,
-    output reg [31:0]  wb_dat_o = 0,
-    output reg         wb_ack_o
+    wb_interface.slave wb
 );
     // ---------- GTWIZARD GTH INSTANTIATION ----------
 
@@ -216,7 +209,7 @@ module sfpp1_eth_10g_axis
     sys_clk_rst_cdc (
         .dest_out(transceiver_hold_reset),
         .dest_clk(freerun_clk), // okClk
-        .src_clk(wb_clk), // sys_clk
+        .src_clk(wb.clk), // sys_clk
         .src_in(transceiver_control[0]));
 
     assign gt_tx_reset_pll_datapath = transceiver_control[1];
@@ -361,7 +354,7 @@ module sfpp1_eth_10g_axis
     // ---------- WISHBONE STATUS & CONTROL LOGIC ----------
 
     // The status signals generally come from various clock sources, not
-    // necessarily synchronized to the wb_clk. Thus perform an unregisted clock
+    // necessarily synchronized to the wb.clk. Thus perform an unregisted clock
     // domain crossing of the signals.
     wire [$bits(transceiver_status)-1:0] transceiver_status_wbclk;
     wire [$bits(phy_status)-1:0]         phy_status_wbclk;
@@ -375,7 +368,7 @@ module sfpp1_eth_10g_axis
         .WIDTH($bits({phy_status, transceiver_status})))
     sfpp_eth_10g_status_cdc (
         .dest_out({phy_status_wbclk, transceiver_status_wbclk}),
-        .dest_clk(wb_clk),
+        .dest_clk(wb.clk),
         .src_clk(), // Inputs are not registered
         .src_in({phy_status, transceiver_status}));
 
@@ -393,33 +386,33 @@ module sfpp1_eth_10g_axis
         .src_in({phy_control}));
 
 
-    always @(posedge wb_clk) begin
-        wb_ack_o <= 0;
-        if (wb_rst) begin
-            wb_dat_o <= 0;
+    always @(posedge wb.clk) begin
+        wb.ack <= 0;
+        if (wb.rst) begin
+            wb.dat_o <= 0;
             transceiver_control <= 0;
-        end else if (wb_cyc_i && wb_stb_i) begin
-            wb_ack_o <= 1;
-            if (wb_we_i) begin
+        end else if (wb.cyc && wb.stb) begin
+            wb.ack <= 1;
+            if (wb.we) begin
                 // Write
-                casez (wb_adr_i)
-                  8'b000010??: transceiver_control <= wb_dat_i;
-                  8'b000100??: phy_control <= wb_dat_i;
+                casez (wb.adr[7:0])
+                  8'b000010??: transceiver_control <= wb.dat_o;
+                  8'b000100??: phy_control <= wb.dat_o;
                 endcase
             end else begin
                 // Read
-                casez (wb_adr_i)
+                casez (wb.adr[7:0])
                   // Indicate the SFP+ bus slave is present in the design
-                  8'b000000??: wb_dat_o <= 1;
-                  8'b000001??: wb_dat_o <= transceiver_status_wbclk;
-                  8'b000010??: wb_dat_o <= transceiver_control;
-                  8'b000011??: wb_dat_o <= phy_status_wbclk;
-                  8'b000100??: wb_dat_o <= phy_control;
-                  default: wb_dat_o <= 32'h00000000;
+                  8'b000000??: wb.dat_o <= 1;
+                  8'b000001??: wb.dat_o <= transceiver_status_wbclk;
+                  8'b000010??: wb.dat_o <= transceiver_control;
+                  8'b000011??: wb.dat_o <= phy_status_wbclk;
+                  8'b000100??: wb.dat_o <= phy_control;
+                  default: wb.dat_o <= 32'h00000000;
                 endcase
             end
         end else begin
-            wb_dat_o <= 0;
+            wb.dat_o <= 0;
         end
     end
 

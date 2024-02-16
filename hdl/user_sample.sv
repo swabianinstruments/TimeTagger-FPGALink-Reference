@@ -66,13 +66,7 @@ module user_sample #(
      // 1 for a valid event, 0 for no event
      input wire [WORD_WIDTH-1:0] s_axis_tkeep,
 
-     input wire [7:0]            wb_adr_i,
-     input wire [31:0]           wb_dat_i,
-     input wire                  wb_we_i,
-     input wire                  wb_stb_i,
-     input wire                  wb_cyc_i,
-     output reg [31:0]           wb_dat_o = 0,
-     output reg                  wb_ack_o,
+     wb_interface.slave          wb,
 
      output reg [5:0]            led
 );
@@ -211,39 +205,39 @@ always @(posedge clk) begin
 end
 
 always @(posedge clk) begin
-     wb_ack_o <= 0;
+     wb.ack <= 0;
      if (rst) begin
-          wb_dat_o <= 0;
+          wb.dat_o <= 0;
           user_control <= 0;
           channel_select <= 0;
           lower_bound <= 64'h0000000000330000;
           upper_bound <= 64'h0000000000340000;
-     end else if (wb_cyc_i && wb_stb_i) begin
-          wb_ack_o <= 1;
-          if (wb_we_i) begin
+     end else if (wb.cyc && wb.stb) begin
+          wb.ack <= 1;
+          if (wb.we) begin
                // Write
-               unique casez (wb_adr_i)
-                    8'b000010??: user_control <= wb_dat_i;
-                    8'b000011??: channel_select <= wb_dat_i;
-                    8'b00010???: lower_bound[(wb_adr_i & 4) * 8 +: 32] <= wb_dat_i;
-                    8'b00011???: upper_bound[(wb_adr_i & 4) * 8 +: 32] <= wb_dat_i;
+               unique casez (wb.adr[7:0])
+                    8'b000010??: user_control <= wb.dat_i;
+                    8'b000011??: channel_select <= wb.dat_i;
+                    8'b00010???: lower_bound[(wb.adr & 4) * 8 +: 32] <= wb.dat_i;
+                    8'b00011???: upper_bound[(wb.adr & 4) * 8 +: 32] <= wb.dat_i;
                     default: ;
                endcase
           end else begin
                // Read
-               unique casez (wb_adr_i)
+               unique casez (wb.adr[7:0])
                     // Indicate the bus slave is present in the design
-                    8'b000000??: wb_dat_o <= 1;
-                    8'b000010??: wb_dat_o <= user_control;
-                    8'b000011??: wb_dat_o <= channel_select;
-                    8'b00010???: wb_dat_o <= lower_bound[(wb_adr_i & 4) * 8 +: 32];
-                    8'b00011???: wb_dat_o <= upper_bound[(wb_adr_i & 4) * 8 +: 32];
-                    8'b00100???: wb_dat_o <= failed[(wb_adr_i & 4) * 8 +: 32];
-                    default: wb_dat_o <= 32'h00000000;
+                    8'b000000??: wb.dat_o <= 1;
+                    8'b000010??: wb.dat_o <= user_control;
+                    8'b000011??: wb.dat_o <= channel_select;
+                    8'b00010???: wb.dat_o <= lower_bound[(wb.adr & 4) * 8 +: 32];
+                    8'b00011???: wb.dat_o <= upper_bound[(wb.adr & 4) * 8 +: 32];
+                    8'b00100???: wb.dat_o <= failed[(wb.adr & 4) * 8 +: 32];
+                    default: wb.dat_o <= 32'h00000000;
                endcase
           end
      end else begin
-          wb_dat_o <= 0;
+          wb.dat_o <= 0;
      end
 end
 endmodule

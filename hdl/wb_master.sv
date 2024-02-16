@@ -47,7 +47,7 @@ module wb_master #
     output reg [WORD_SIZE - 1 : 0]      data_o,         // data read by okBTPipeOut. The data is available exactly one clock cycle after the assertion of the ep_ready by okBTPipeOut
 
     // wishbone interfaces
-    wb_interface.master_port            wb_master
+    wb_interface.master                 wb_master
 );
 
 ///////////////////////////////////////////////////////input command structure /////////////////////////////////////////////////////////
@@ -219,11 +219,11 @@ always_ff @(posedge wb_clk) begin
 
     // By default: Release the wishbone bus.
     // So every blocking state must manually keep stb&cyc asserted.
-    wb_master.wb_stb_o  <= 0;
-    wb_master.wb_cyc_o  <= 0;
-    wb_master.wb_we_o   <= 'X;
-    wb_master.wb_adr_o  <= 'X;
-    wb_master.wb_dat_o  <= 'X;
+    wb_master.stb  <= 0;
+    wb_master.cyc  <= 0;
+    wb_master.we   <= 'X;
+    wb_master.adr  <= 'X;
+    wb_master.dat_i<= 'X;
 
     // By default: No action on the fifos
     fifo2_wt_en         <= 0;
@@ -306,25 +306,25 @@ always_ff @(posedge wb_clk) begin
         end
         //-----------------------------------------------------------------------
         SEND_WB_COMMAND : begin
-            wb_master.wb_stb_o  <= 1'b1;
-            wb_master.wb_cyc_o  <= 1'b1;
-            wb_master.wb_we_o   <= command_type[0]; // 0: read; 1: write
-            wb_master.wb_adr_o  <= wb_inp_address;
-            wb_master.wb_dat_o  <= pure_data;
+            wb_master.stb  <= 1'b1;
+            wb_master.cyc  <= 1'b1;
+            wb_master.we   <= command_type[0]; // 0: read; 1: write
+            wb_master.adr  <= wb_inp_address;
+            wb_master.dat_i<= pure_data;
             if (modified_data_write) begin
-                wb_master.wb_we_o   <= 1; // 0: read; 1: write
-                wb_master.wb_dat_o  <= modified_data;
+                wb_master.we   <= 1; // 0: read; 1: write
+                wb_master.dat_i  <= modified_data;
             end
 
-            if (wb_master.wb_ack_i || timeout_flag) begin
-                wb_master.wb_stb_o  <= 1'b0;
-                wb_master.wb_cyc_o  <= 1'b0;
-                wb_master.wb_adr_o  <= 'X;
-                wb_master.wb_dat_o  <= 'X;
-                wb_master.wb_we_o   <= 'X;
+            if (wb_master.ack || timeout_flag) begin
+                wb_master.stb  <= 1'b0;
+                wb_master.cyc  <= 1'b0;
+                wb_master.adr  <= 'X;
+                wb_master.dat_i<= 'X;
+                wb_master.we   <= 'X;
                 wb_inp_address      <= wb_inp_address + addr_incr;
                 last_address        <= wb_inp_address;
-                wb_data_in          <= wb_master.wb_dat_i;
+                wb_data_in          <= wb_master.dat_o;
 
                 if (burst_write)
                     input_state     <= EXTRACT_DATA;
