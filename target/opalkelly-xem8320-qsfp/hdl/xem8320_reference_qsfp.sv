@@ -22,6 +22,9 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
+`include "../../../hdl/ref_design_pkg.sv"
+import pkg_base_address::*;
+
 module xem8320_reference_qsfp #(
     /* TC_WORD_WIDTH controls how many events are processed simultaneously by
     the tag converter and the modules that use its output, such as Histogram,
@@ -62,6 +65,22 @@ module xem8320_reference_qsfp #(
 
     output wire [5:0] led
 );
+
+    // --------------------------------------------------- //
+    // ---------------- LOCAL PARAMETERS-- --------------- //
+    // --------------------------------------------------- //
+    localparam GT_WORD_WIDTH = 2; // 2 ==> 10G, 4 ==> 40G
+    localparam GT_DATA_WIDTH = 32*GT_WORD_WIDTH;
+    localparam GT_KEEP_WIDTH = ((GT_DATA_WIDTH+7)/8);
+
+    // DC_WORD_WIDTH should be fixed at 4; otherwise crc checker
+    // should be newly generated from the python code.
+    localparam DC_WORD_WIDTH = 4;
+    localparam DC_DATA_WIDTH = 32*DC_WORD_WIDTH;
+    localparam DC_KEEP_WIDTH = ((DC_DATA_WIDTH+7)/8);
+
+    localparam TC_DATA_WIDTH = 32*TC_WORD_WIDTH;
+    localparam TC_KEEP_WIDTH = ((TC_DATA_WIDTH+7)/8);
 
     // --------------------------------------------------- //
     // --------------- OPALKELLY INTERFACE --------------- //
@@ -122,33 +141,6 @@ module xem8320_reference_qsfp #(
     // ---------- WISHBONE CROSSBAR & OK BRIDGE -----------//
     // --------------------------------------------------- //
 
-    // Wishbone crossbar to connect the various design components
-    wb_interface #(.SLAVES(5)) wb();
-    // Always ACK Machine (required for the wb_pipe_bridge)
-    assign wb.slave_wb_adr[0]  = 24'b100000000000000000000000;
-    // SFP+ I2C Management Interface
-    assign wb.slave_wb_adr[1]  = 24'b100000000000000000000010;
-    // SFP+ 10G Ethernet Core (Port 1)
-    assign wb.slave_wb_adr[2]  = 24'b100000000000000000010101;
-    // QSFP+ 40G Ethernet
-    // assign wb.slave_wb_adr[3]  = 24'b100000000000000000010110;
-    // Statistics module
-    assign wb.slave_wb_adr[3]  = 24'b100000000000000001010001;
-    // User design interface
-    assign wb.slave_wb_adr[4]  = 24'b100000000000000001010010;
-
-    // Wishbone Always ACK Machine, required for OpalKelly Pipe-based Wishbone Bridge
-    always @(posedge sys_clk) begin
-        if (sys_clk_rst) begin
-            wb.slave_ack_o[0] <= 1'b0;
-            wb.slave_dat_o[0] <= 32'b0;
-        end else if (wb.slave_cyc_i[0] && wb.slave_stb_i[0]) begin
-            wb.slave_ack_o[0] <= 1'b1;
-        end else begin
-            wb.slave_ack_o[0] <= 1'b0;
-        end
-    end
-
     wire        receive_ready;
     wire        ep_write;
     wire        wr_strobe;
@@ -178,9 +170,13 @@ module xem8320_reference_qsfp #(
       .ep_ready(send_ready)
     );
 
+    // to_wb_ic is the interface between wb_master and wb_interconnect
+    wb_interface to_wb_ic();
+
+    localparam WB_MASTER_FIFO_DEPTH = 2048;
     wb_master #(
-        .FIFO_IN_SIZE(2048),
-        .FIFO_OUT_SIZE(2048),
+        .FIFO_IN_SIZE(WB_MASTER_FIFO_DEPTH),
+        .FIFO_OUT_SIZE(WB_MASTER_FIFO_DEPTH),
         .TIME_OUT_VAL(8*1024*1024)
 
     ) wb_master_core (
@@ -196,12 +192,42 @@ module xem8320_reference_qsfp #(
         .ep_read(ep_read),
         .send_ready(send_ready),
         .data_o(pipeout_fifo_data),
-        .wb_master(wb.master_port)
+        .wb_master(to_wb_ic)
     );
 
-    // --------------------------------------------------- //
-    // -------------- SFP+ PORT 1 INTERFACE -------------- //
-    // --------------------------------------------------- //
+    wb_interface wb_array[WB_SIZE]();
+
+    wb_interconnect #(.INSTANCES(WB_SIZE), .BASE_ADDRESS(base_address), .MEMORY_SPACE(memory_space))
+    wb_interconnect_inst( .s_wb(to_wb_ic), .m_wb(wb_array));
+
+   // --------------------------------------------------- //
+   // --------- TOP MODULE WISHBONE INTERFACE------------ //
+   // --------------------------------------------------- //
+
+    // Wishbone Always ACK Machine, required for OpalKelly Pipe-based Wishbone Bridge
+    always @(posedge sys_clk) begin
+        if (sys_clk_rst) begin
+            wb_array[top_module].ack     <= 1'b0;
+            wb_array[top_module].dat_o   <= 32'b0;
+        end else if (wb_array[top_module].cyc && wb_array[top_module].stb) begin
+            wb_array[top_module].ack     <= 1'b1;
+            if (wb_array[top_module].we) begin
+
+            end else begin
+                case (wb_array[top_module].adr[7:0])
+                    8'b00000000: wb_array[top_module].dat_o   <= 1;
+                    8'b00000001: wb_array[top_module].dat_o   <= WB_MASTER_FIFO_DEPTH; // return the size of the FIFOs used in wb_master
+                    default:wb_array[top_module].dat_o   <= 32'b0;
+                endcase
+            end
+        end else begin
+            wb_array[top_module].ack     <= 1'b0;
+        end
+    end
+
+   // --------------------------------------------------- //
+   // -------------- SFP+ PORT 1 INTERFACE -------------- //
+   // --------------------------------------------------- //
 
     // ---------- SFP+ PORT 1 MANAGEMENT INTERFACE I2C-WB CORE ----------
     wire sfpp1_i2c_scl_in;
@@ -227,13 +253,13 @@ module xem8320_reference_qsfp #(
         .wb_clk_i(sys_clk),
         .wb_rst_i(sys_clk_rst),
         .arst_i(1),
-        .wb_adr_i(wb.slave_adr_i[2:0]),
-        .wb_dat_i(wb.slave_dat_i),
-        .wb_dat_o(wb.slave_dat_o[1]),
-        .wb_we_i(wb.slave_we_i[1]),
-        .wb_stb_i(wb.slave_stb_i[1]),
-        .wb_cyc_i(wb.slave_cyc_i[1]),
-        .wb_ack_o(wb.slave_ack_o[1]),
+        .wb_adr_i(wb_array[i2c_master].adr),
+        .wb_dat_i(wb_array[i2c_master].dat_i),
+        .wb_dat_o(wb_array[i2c_master].dat_o),
+        .wb_we_i(wb_array[i2c_master].we),
+        .wb_stb_i(wb_array[i2c_master].stb),
+        .wb_cyc_i(wb_array[i2c_master].cyc),
+        .wb_ack_o(wb_array[i2c_master].ack),
         .wb_inta_o(),
         .scl_pad_i(sfpp1_i2c_scl_in),
         .scl_pad_o(sfpp1_i2c_scl_out),
@@ -242,19 +268,7 @@ module xem8320_reference_qsfp #(
         .sda_pad_o(sfpp1_i2c_sda_out),
         .sda_padoen_o(sfpp1_i2c_sda_out_en));
 
-    // ---------------------------- localparams --------------------------------
-    localparam GT_WORD_WIDTH = 2; // 2 ==> 10G, 4 ==> 40G
-    localparam GT_DATA_WIDTH = 32*GT_WORD_WIDTH;
-    localparam GT_KEEP_WIDTH = ((GT_DATA_WIDTH+7)/8);
 
-    // DC_WORD_WIDTH should be fixed at 4; otherwise crc checker
-    // should be newly generated from the python code.
-    localparam DC_WORD_WIDTH = 4;
-    localparam DC_DATA_WIDTH = 32*DC_WORD_WIDTH;
-    localparam DC_KEEP_WIDTH = ((DC_DATA_WIDTH+7)/8);
-
-    localparam TC_DATA_WIDTH = 32*TC_WORD_WIDTH;
-    localparam TC_KEEP_WIDTH = ((TC_DATA_WIDTH+7)/8);
 
     // ---------- SFP+ PORT 1 (incl. TRANSCEIVER + PHY + AXI4-STREAM) ----------
     assign sfpp1_tx_disable = 0;
@@ -297,15 +311,7 @@ module xem8320_reference_qsfp #(
 
     // Transceiver + PHY
     sfpp1_eth_10g_axis sfpp1_eth_10g_axis_inst (
-        .wb_clk(sys_clk),
-        .wb_rst(sys_clk_rst),
-        .wb_adr_i(wb.slave_adr_i[7:0]),
-        .wb_dat_i(wb.slave_dat_i),
-        .wb_dat_o(wb.slave_dat_o[2]),
-        .wb_we_i(wb.slave_we_i[2]),
-        .wb_stb_i(wb.slave_stb_i[2]),
-        .wb_cyc_i(wb.slave_cyc_i[2]),
-        .wb_ack_o(wb.slave_ack_o[2]),
+        .wb(wb_array[ethernet]),
 
         .freerun_clk(okClk),
         .freerun_rst(okRst),
@@ -334,13 +340,17 @@ module xem8320_reference_qsfp #(
         .axis_rx_tlast(eth_axis_rx_tlast),
         .axis_rx_tkeep(eth_axis_rx_tkeep));
 
+   // --------------------------------------------------- //
+   // -------- SYNCHRONIZATION AND WIDTH ADAPTION ------- //
+   // --------------------------------------------------- //
+
    wire                     sync_rx_data_tready;
    wire                     sync_rx_data_tvalid;
    wire [DC_DATA_WIDTH-1:0] sync_rx_data_tdata;
    wire                     sync_rx_data_tlast;
    wire [DC_KEEP_WIDTH-1:0] sync_rx_data_tkeep;
 
-    // this block is used for synchronization and width adaptation
+    // this block is used for synchronization and width adaptation.
    axis_async_fifo_adapter #(
         .DEPTH(512),
         .S_DATA_WIDTH(GT_DATA_WIDTH),
@@ -371,6 +381,10 @@ module xem8320_reference_qsfp #(
         .m_axis_tlast(sync_rx_data_tlast),
         .m_axis_tkeep(sync_rx_data_tkeep)
 );
+
+   // --------------------------------------------------- //
+   // ------------ CRC CHECKSUM VERIFICATION ------------ //
+   // --------------------------------------------------- //
 
    wire                     data_stream_tready;
    wire                     data_stream_tvalid;
@@ -408,7 +422,9 @@ module xem8320_reference_qsfp #(
    wire [TC_KEEP_WIDTH-1:0]  tag_stream_tkeep;
    wire [31:0]               tag_stream_tuser; // Contains wrap count
 
-   // Decoding of the FPGA-link protocol
+   /* The si_data_channel module is responsible for extracting raw data and associated
+   time information from Ethernet data, which includes various headers.
+   */
    si_data_channel #(.DATA_WIDTH_IN(DC_DATA_WIDTH), .DATA_WIDTH_OUT(TC_DATA_WIDTH), .STATISTICS(1)) data_channel
      (
       .clk(sys_clk),
@@ -427,23 +443,23 @@ module xem8320_reference_qsfp #(
       .m_axis_tkeep(tag_stream_tkeep),
       .m_axis_tuser(tag_stream_tuser),
 
-      .wb_adr_i(wb.slave_adr_i[7:0]),
-      .wb_dat_i(wb.slave_dat_i),
-      .wb_dat_o(wb.slave_dat_o[3]),
-      .wb_we_i(wb.slave_we_i[3]),
-      .wb_stb_i(wb.slave_stb_i[3]),
-      .wb_cyc_i(wb.slave_cyc_i[3]),
-      .wb_ack_o(wb.slave_ack_o[3])
+      .wb_statistics(wb_array[statistics])
       );
 
-   wire [4:0]                 user_sample_inp_channel     [TC_WORD_WIDTH-1 : 0];
-   wire                       user_sample_inp_rising_edge [TC_WORD_WIDTH-1 : 0];
-   wire [63:0]                user_sample_inp_tagtime     [TC_WORD_WIDTH-1 : 0];
-   wire [TC_WORD_WIDTH-1 : 0] user_sample_inp_tkeep;
-   wire                       user_sample_inp_tready;
-   wire                       user_sample_inp_tvalid;
+    // --------------------------------------------------- //
+    // ----------- GENERATING 64 BIT TIMESTAMPS ---------- //
+    // --------------------------------------------------- //
 
-   // Generate 64 bit timestamps
+   wire [4:0]                 measurement_inp_channel     [TC_WORD_WIDTH-1 : 0];
+   wire                       measurement_inp_rising_edge [TC_WORD_WIDTH-1 : 0];
+   wire [63:0]                measurement_inp_tagtime     [TC_WORD_WIDTH-1 : 0];
+   wire [TC_WORD_WIDTH-1 : 0] measurement_inp_tkeep;
+   wire                       measurement_inp_tready;
+   wire                       measurement_inp_tvalid;
+
+   /* The si_tag_converter is tasked with decoding the 32-bit input data into real timestamps.
+   These timestamps are represented as 64 bits, and the resolution is 1/3 picoseconds.
+   */
    si_tag_converter #(.DATA_WIDTH_IN(TC_DATA_WIDTH)) converter
      (
       .clk(sys_clk),
@@ -455,37 +471,37 @@ module xem8320_reference_qsfp #(
       .s_axis_tkeep(tag_stream_tkeep),
       .s_axis_tuser(tag_stream_tuser),
 
-      .m_axis_tvalid(user_sample_inp_tvalid),
-      .m_axis_tready(user_sample_inp_tready),
-      .m_axis_tkeep(user_sample_inp_tkeep),
-      .m_axis_tagtime(user_sample_inp_tagtime),
-      .m_axis_channel(user_sample_inp_channel),
-      .m_axis_rising_edge(user_sample_inp_rising_edge)
+      .m_axis_tvalid(measurement_inp_tvalid),
+      .m_axis_tready(measurement_inp_tready),
+      .m_axis_tkeep(measurement_inp_tkeep),
+      .m_axis_tagtime(measurement_inp_tagtime),
+      .m_axis_channel(measurement_inp_channel),
+      .m_axis_rising_edge(measurement_inp_rising_edge)
       );
 
     // --------------------------------------------------- //
-    // ------ User design, place your modules here! ------ //
+    // --- User design, add your modules to measurement -- //
     // --------------------------------------------------- //
 
-   user_sample #(.WORD_WIDTH(TC_WORD_WIDTH)) user_design
+    /*The measurement module encompasses various components such as user_sample,
+      histogram, and coincidence. If you wish to incorporate your own measurement
+      module, it is highly recommended to include it within the measurement module.
+      To achieve this, ensure that you handle all necessary Wishbone interfaces for
+      your modules.
+    */
+    measurement #(.WORD_WIDTH(TC_WORD_WIDTH)) measurement_core
      (
       .clk(sys_clk),
       .rst(sys_clk_rst),
 
-      .s_axis_tvalid(user_sample_inp_tvalid),
-      .s_axis_tready(user_sample_inp_tready),
-      .s_axis_tkeep(user_sample_inp_tkeep),
-      .s_axis_channel(user_sample_inp_channel),
-      .s_axis_tagtime(user_sample_inp_tagtime),
-      .s_axis_rising_edge(user_sample_inp_rising_edge),
+      .s_axis_tvalid(measurement_inp_tvalid),
+      .s_axis_tready(measurement_inp_tready),
+      .s_axis_tkeep(measurement_inp_tkeep),
+      .s_axis_channel(measurement_inp_channel),
+      .s_axis_tagtime(measurement_inp_tagtime),
+      .s_axis_rising_edge(measurement_inp_rising_edge),
 
-      .wb_adr_i(wb.slave_adr_i[7:0]),
-      .wb_dat_i(wb.slave_dat_i),
-      .wb_dat_o(wb.slave_dat_o[4]),
-      .wb_we_i(wb.slave_we_i[4]),
-      .wb_stb_i(wb.slave_stb_i[4]),
-      .wb_cyc_i(wb.slave_cyc_i[4]),
-      .wb_ack_o(wb.slave_ack_o[4]),
+      .wb_user_sample(wb_array[user_sample]), // wb interface for user_sample module
 
       .led(led)
       );

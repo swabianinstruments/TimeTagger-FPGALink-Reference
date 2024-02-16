@@ -29,6 +29,11 @@ module si_data_channel
        input wire                       clk,
        input wire                       rst,
 
+        // Wishbone interface for statistics. Has adresses for 0-39
+`ifndef __ICARUS__
+        wb_interface.slave               wb_statistics,
+`endif
+
        // Ethernet data *after* the MAC, without CRC or preamble, clk
        input wire                       s_axis_tvalid,
        output wire                      s_axis_tready,
@@ -42,16 +47,8 @@ module si_data_channel
        output wire [DATA_WIDTH_OUT-1:0] m_axis_tdata,
        output wire                      m_axis_tlast,
        output wire [KEEP_WIDTH_OUT-1:0] m_axis_tkeep,
-       output wire [32-1:0]             m_axis_tuser, // Rollover time
+       output wire [32-1:0]             m_axis_tuser // Rollover time
 
-        // Wishbone interface for statistics. Has adresses for 0-39
-       input wire [7:0]                 wb_adr_i,
-       input wire [31:0]                wb_dat_i,
-       input wire                       wb_we_i,
-       input wire                       wb_stb_i,
-       input wire                       wb_cyc_i,
-       output reg [31:0]                wb_dat_o,
-       output reg                       wb_ack_o
        );
    initial begin
 
@@ -169,13 +166,7 @@ module si_data_channel
          .lost_packet(lost_packet),
          .invalid_packet(invalid_packet),
 
-         .wb_adr_i(wb_adr_i),
-         .wb_dat_i(wb_dat_i),
-         .wb_we_i(wb_we_i),
-         .wb_stb_i(wb_stb_i),
-         .wb_cyc_i(wb_cyc_i),
-         .wb_dat_o(wb_dat_o),
-         .wb_ack_o(wb_ack_o)
+         .wb(wb_statistics)
          );
 
    end
