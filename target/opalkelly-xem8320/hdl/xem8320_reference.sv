@@ -450,9 +450,8 @@ module xem8320_reference #(
     // ----------- GENERATING 64 BIT TIMESTAMPS ---------- //
     // --------------------------------------------------- //
 
-   wire [4:0]                 measurement_inp_channel     [TC_WORD_WIDTH-1 : 0];
-   wire                       measurement_inp_rising_edge [TC_WORD_WIDTH-1 : 0];
-   wire [63:0]                measurement_inp_tagtime     [TC_WORD_WIDTH-1 : 0];
+   wire signed [5:0]          measurement_inp_channel  [TC_WORD_WIDTH-1 : 0];
+   wire [63:0]                measurement_inp_tagtime  [TC_WORD_WIDTH-1 : 0];
    wire [TC_WORD_WIDTH-1 : 0] measurement_inp_tkeep;
    wire                       measurement_inp_tready;
    wire                       measurement_inp_tvalid;
@@ -475,8 +474,7 @@ module xem8320_reference #(
       .m_axis_tready(measurement_inp_tready),
       .m_axis_tkeep(measurement_inp_tkeep),
       .m_axis_tagtime(measurement_inp_tagtime),
-      .m_axis_channel(measurement_inp_channel),
-      .m_axis_rising_edge(measurement_inp_rising_edge)
+      .m_axis_channel(measurement_inp_channel)
       );
 
     // --------------------------------------------------- //
@@ -499,7 +497,6 @@ module xem8320_reference #(
       .s_axis_tkeep(measurement_inp_tkeep),
       .s_axis_channel(measurement_inp_channel),
       .s_axis_tagtime(measurement_inp_tagtime),
-      .s_axis_rising_edge(measurement_inp_rising_edge),
 
       .wb_user_sample(wb_array[user_sample]), // wb interface for user_sample module
 

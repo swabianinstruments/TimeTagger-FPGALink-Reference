@@ -32,11 +32,8 @@ module measurement #(
      output wire                 s_axis_tready,
      // The time the tag was captured at in 1/3 ps since the startup of the TTX
      input wire [64-1:0]         s_axis_tagtime [WORD_WIDTH-1:0],
-     // The channel this event occured on. Starts at 0 while the actual channel numbering
-     // starts with 1! (if 'channel' is 2, it's actually the channel number 3)
-     input wire [4:0]            s_axis_channel [WORD_WIDTH-1:0],
-     // 1 on rising edge, 0 on falling edge
-     input wire                  s_axis_rising_edge [WORD_WIDTH-1:0],
+     // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
+     input wire signed [5:0]     s_axis_channel [WORD_WIDTH-1:0],
      // Each bit in s_axis_tkeep represents the validity of an event:
      // 1 for a valid event, 0 for no event in the corresponding bit position.
      input wire [WORD_WIDTH-1:0] s_axis_tkeep,
@@ -59,7 +56,6 @@ user_sample #(.WORD_WIDTH(WORD_WIDTH)) user_design
  .s_axis_tkeep(s_axis_tkeep),
  .s_axis_channel(s_axis_channel),
  .s_axis_tagtime(s_axis_tagtime),
- .s_axis_rising_edge(s_axis_rising_edge),
 
  .wb(wb_user_sample),
 
