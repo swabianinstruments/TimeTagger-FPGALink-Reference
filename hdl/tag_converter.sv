@@ -8,6 +8,7 @@
  *
  * Authors:
  * - 2023 David Sawatzke <david@swabianinstruments.com>
+ * - 2024 Ehsan Jokar <ehsan@swabianinstruments.com>
  *
  * This file is provided under the terms and conditions of the BSD 3-Clause
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -47,11 +48,8 @@ module si_tag_converter #(
          // The time the tag was captured at
          // In 1/3 ps since the startup of the TTX
          output wire [64-1:0]           m_axis_tagtime [NUMBER_OF_WORDS-1:0],
-         // The channel this event occured on
-         // Starts at 0 while the actual channel numbering starts with 1! (if 'channel' is 2, it's actually the channel number 3)
-         output wire [4:0]              m_axis_channel [NUMBER_OF_WORDS-1:0],
-         // 1 on rising edge, 0 on falling edge
-         output wire                    m_axis_rising_edge [NUMBER_OF_WORDS-1:0],
+         // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
+         output wire signed [5:0]       m_axis_channel [NUMBER_OF_WORDS-1:0],
 
          output wire [NUMBER_OF_WORDS-1:0]   m_axis_tkeep
          );
@@ -60,11 +58,10 @@ module si_tag_converter #(
        genvar                           i;
         generate for(i = 0; i<NUMBER_OF_WORDS; i += 1) begin
                wire valid_tag;
-               reg  rising_edge;
                wire [63:0] tagtime;
                wire [1:0]  event_type;
                wire [5:0]  channel_number;
-               reg [4:0]   channel;
+               reg signed [5:0] channel;
                wire [11:0] subtime;
                wire [11:0] counter;
                reg [63:0]  tagtime_p;
@@ -120,18 +117,15 @@ module si_tag_converter #(
 
              always @(*) begin
                   if (channel_number < CHANNEL_COUNT) begin
-                       channel = channel_number;
-                       rising_edge = 1;
+                       channel = channel_number + 1;
                   end else begin
-                       channel = (channel_number - CHANNEL_COUNT);
-                       rising_edge = 0;
+                       channel = CHANNEL_COUNT - 1 - channel_number;
                   end
              end
 
              assign m_axis_tagtime[i] = tagtime;
              assign m_axis_channel[i] = channel;
              assign m_axis_tkeep[i] = valid_tag;
-             assign m_axis_rising_edge[i] = rising_edge;
         end endgenerate
         assign m_axis_tvalid = |m_axis_tkeep;
 endmodule
