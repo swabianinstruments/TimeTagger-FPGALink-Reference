@@ -206,9 +206,9 @@ always @(posedge clk) begin
      if (rst) begin
           wb.dat_o <= 0;
           user_control <= 0;
-          channel_select <= 0;
-          lower_bound <= 64'h0000000000330000;
-          upper_bound <= 64'h0000000000340000;
+          channel_select <= 1;
+          lower_bound <= 64'h0000000000660000;
+          upper_bound <= 64'h0000000000680000;
      end else if (wb.cyc && wb.stb) begin
           wb.ack <= 1;
           if (wb.we) begin
