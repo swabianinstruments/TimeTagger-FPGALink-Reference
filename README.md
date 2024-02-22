@@ -42,8 +42,23 @@ For detailed information on the usage and configuration of the modules, refer to
 
 ## Getting started
 
+First up, clone the reference design repository:
+
+``` sh
+$ git clone --recursive https://github.com/swabianinstruments/TimeTagger-FPGALink-Reference.git
+```
+
+and generate the shared files:
+
+``` sh
+$ cd TimeTagger-FPGALink-Reference
+TimeTagger-FPGALink-Reference$ make
+[ .. ]
+TimeTagger-FPGALink-Reference$
+```
+
 We recommend using the OpalKelly XEM8320. Please follow the direction in the
-[target README](./target/opalkelly-xem8320/README.md) for getting started.
+[target README](./target/opalkelly-xem8320/README.md) for getting started with this target.
 
 ## Roadmap
 
