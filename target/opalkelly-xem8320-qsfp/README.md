@@ -161,9 +161,9 @@ si@ubuntu:target/opalkelly-xem8320-qsfp/host$ python3
 >>> xem = ok.FrontPanel()
 >>> xem.OpenBySerial()
 0
->>> import common.xem_wishbone
->>> wb = common.xem_wishbone.XEMWishbone(xem)
->>> user = 0b1010010 << 8
+>>> import common.ok_wishbone
+>>> wb = common.ok_wishbone.Wishbone(xem)
+>>> user = 0x80005200
 >>> wb.read(user + 0)
 1
 >>> wb.write(user + 8, 0x1) # Reset the state of the tag time difference detector
