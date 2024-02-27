@@ -53,6 +53,11 @@ set files [list \
  "[file normalize "$origin_dir/hdl/ref_design_pkg.sv"]"\
  "[file normalize "$origin_dir/hdl/wishbone.sv"]"\
  "[file normalize "$origin_dir/hdl/measurement.sv"]"\
+ "[file normalize "$origin_dir/hdl/histogram/histogram_wrapper.sv"]"\
+ "[file normalize "$origin_dir/hdl/histogram/histogram.sv"]"\
+ "[file normalize "$origin_dir/hdl/histogram/Hist_1lane.sv"]"\
+ "[file normalize "$origin_dir/hdl/histogram/wide_mult.sv"]"\
+ "[file normalize "$origin_dir/hdl/histogram/wide_divider.sv"]"\
  "[file normalize "$origin_dir/gen_srcs/eth_crc_128b_comb.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_rx.v"]"\

@@ -48,7 +48,10 @@ package pkg_base_address;
     localparam base_address_user_design = 32'h80005200;
     localparam memory_size_user_design  = 512;
 
-    enum{top_module, i2c_master, ethernet, statistics, user_sample} wb_instances;
+    localparam base_address_histogram   = 32'h80006000;
+    localparam memory_size_histogram    = DEFAULT_DEPTH;
+
+    enum{top_module, i2c_master, ethernet, statistics, user_sample, histogram} wb_instances;
 
     localparam WB_SIZE = wb_instances.num();
 
@@ -57,7 +60,8 @@ package pkg_base_address;
                                                     base_address_sfpp_i2c,
                                                     base_address_ethernet,
                                                     base_address_statistics,
-                                                    base_address_user_design
+                                                    base_address_user_design,
+                                                    base_address_histogram
                                                     };
 
     localparam integer memory_space[WB_SIZE] = '{
@@ -65,7 +69,8 @@ package pkg_base_address;
                                                     memory_size_sfpp_i2c,
                                                     memory_size_ethernet,
                                                     memory_size_statistics,
-                                                    memory_size_user_design
+                                                    memory_size_user_design,
+                                                    memory_size_histogram
                                                     };
 
 endpackage

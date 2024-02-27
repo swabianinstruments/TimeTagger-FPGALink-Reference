@@ -297,7 +297,7 @@ always_ff @(posedge wb_clk) begin
 
                 // if timeout has not occurred, by receiving a new data from FIFO1, the state changes into SEND_WB_COMMAND to start a new wb transaction.
                 // Otherwise, no wb transaction is initiated, and the state remains EXTRACT_DATA until flushing the block. If timeout_flag is still asserted,
-                // the FIFO1 output data is discard even though a new command is initiated. If fact, we discard the data until the block_position signal be zero,
+                // the FIFO1 output data is discard even though a new command is initiated. In fact, we discard the data until the block_position signal be zero,
                 // indicating that a completely new block of information is received.
                 if (!timeout_flag && (cnt_pure_data_read < block_size)) begin
                     input_state     <= SEND_WB_COMMAND;
