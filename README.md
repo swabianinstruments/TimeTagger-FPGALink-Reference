@@ -21,6 +21,17 @@ Supported reference design boards:
 More information on the individual supported boards and setup guides are
 contained within the respective board target directories.
 
+## Measurement Features
+This reference design contains the following measurement feature:
+
+### Histogram
+The Histogram module enables the processing of time tags received from the Time Tagger X effectively. It is designed to measure the time differences between events in two distinct channels. The calculated time differences are then presented in a histogram, offering valuable insights into the distribution of these time differences. The resulting data can be transmitted to a PC for further analysis or be analyzed inside the FPGA using another module. Additionally, for users intending to process the histogram data within the FPGA, the Histogram module provides these statistics: weighted means, index of the bin with the largest value, and variance.
+
+For detailed information on this module's usage and configuration, refer to the its documentation:
+
+- [Histogram Module Documentation](histogram.md)
+
+
 ## Getting started
 
 We recommend using the OpalKelly XEM8320. Please follow the direction in the

@@ -499,6 +499,16 @@ module xem8320_reference_qsfp #(
       .s_axis_tagtime(measurement_inp_tagtime),
 
       .wb_user_sample(wb_array[user_sample]), // wb interface for user_sample module
+      .wb_histogram(wb_array[histogram]), // wb interface for histogram module
+      
+      //------------------------------------------//
+      //---- add wb interface for your modules ----//
+      
+      /*please define its base addressess and memory_spaces 
+       in the pkg_base_address defined in the ref_design_pkg.sv */
+       
+      // wb_your_module_1(wb_array[your_inst_name_1]), 
+      // wb_your_module_2(wb_array[your_inst_name_2]), 
 
       .led(led)
       );

@@ -26,6 +26,7 @@ class Wishbone:
     ADDR_WBBRIDGE_OUT: int = 0xA4
     # We should support 2048 words, but with prog_full
     MAX_FIFO_SIZE = (2*1024 - 300) * 4
+    MAX_BURST_SIZE = 8191
 
     def __init__(self, xem: ok.okCFrontPanel):
         self.xem = xem
