@@ -112,7 +112,7 @@ module si_tag_converter #(
 
              assign event_type = tdata_p6[31:30];
              assign channel_number = tdata_p6[29:24];
-             assign valid_tag = event_type == 2'b01 /* && channel_number < 2 * CHANNEL_COUNT */;
+             assign valid_tag = (event_type == 2'b01) && (channel_number < (2 * CHANNEL_COUNT));
              assign tagtime = tagtime_p4;
 
              always @(*) begin
