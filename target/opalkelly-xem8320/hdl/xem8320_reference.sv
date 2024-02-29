@@ -393,7 +393,7 @@ module xem8320_reference #(
    wire [DC_KEEP_WIDTH-1:0] data_stream_tkeep;
 
    // CRC checksum verification
-   eth_axis_fcs_checker_128b
+   eth_axis_fcs_checker_128b fcs_checker
      (
       .clk(sys_clk),
       .rst(sys_clk_rst),
