@@ -504,8 +504,8 @@ module xem8320_reference #(
       //------------------------------------------//
       //---- add wb interface for your modules ----//
 
-      /*please define its base addressess and memory_spaces
-       in the pkg_base_address defined in the ref_design_pkg.sv */
+      /*please define its base addresses and memory_spaces
+        in the pkg_base_address defined in the ref_design_pkg.sv */
 
       // wb_your_module_1(wb_array[your_inst_name_1]),
       // wb_your_module_2(wb_array[your_inst_name_2]),

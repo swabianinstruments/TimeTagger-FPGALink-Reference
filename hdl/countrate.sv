@@ -38,7 +38,7 @@ module countrate #(
     input wire [NUM_OF_TAGS - 1 : 0] valid_tag,
     input wire [TOT_TAGS_WIDTH - 1 : 0] tagtime,
     /*There is a possibility to receive a keep alive tag in order to update the
-    window information and update the PC or the downstream module with the existance
+    window information and update the PC or the downstream module with the existence
     of empty wondows. This will happen if we don't receive any real tag for a long period.
     To deal with this, the keep alive would be an effective solution. This tag can come with
     a channel number outside of [0 : NUM_OF_CHANNELS) range. */
@@ -51,7 +51,7 @@ module countrate #(
 
     /* When start_counting is asserted, the channel counting is started
     and the counter values will be output by the end of each window. The
-    start point of the first window would be the time of the tag comming
+    start point of the first window would be the time of the tag coming
     after assetion of start_counting.
     */
     input wire start_counting,
@@ -158,7 +158,7 @@ module countrate #(
 
     /* Window is updated when update_window is asserted. If all the valid tags in the current
     clock cycle belong to the current window, update_window would be zero. If valid tags belong
-    to both the current window and the next one, update_window will be asserted immidiately and
+    to both the current window and the next one, update_window will be asserted immediately and
     remains high for one clock cycle. Therefore, window will be updated, and the tags at the next
     clock cycle would be compared with the updated window. If a tag belongs to a window that is
     neither the current window nor the next one (at least two windows away), no data will be read
@@ -180,7 +180,7 @@ module countrate #(
             start_counting_hold <= 1;
         end
 
-        // initilizing the first window
+        // initializing the first window
         if (!start_measurement) begin
             for (int i = NUM_OF_TAGS - 1; i >= 0; i--) begin
                 if(data.valid[i] && fifo_data_valid && start_counting_hold) begin

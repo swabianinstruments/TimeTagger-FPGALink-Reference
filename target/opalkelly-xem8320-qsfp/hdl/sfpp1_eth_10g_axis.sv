@@ -354,7 +354,7 @@ module sfpp1_eth_10g_axis
     // ---------- WISHBONE STATUS & CONTROL LOGIC ----------
 
     // The status signals generally come from various clock sources, not
-    // necessarily synchronized to the wb.clk. Thus perform an unregisted clock
+    // necessarily synchronized to the wb.clk. Thus perform an unregistered clock
     // domain crossing of the signals.
     wire [$bits(transceiver_status)-1:0] transceiver_status_wbclk;
     wire [$bits(phy_status)-1:0]         phy_status_wbclk;
