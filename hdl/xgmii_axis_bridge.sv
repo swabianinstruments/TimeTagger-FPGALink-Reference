@@ -57,13 +57,8 @@ module xgmii_axis_bridge #(
 );
 
     initial begin
-        if ((DATA_WIDTH != 64) && (DATA_WIDTH != 32)) begin
-            $error("Error: XGMII data width must be either 32-bit or 64-bit");
-            $finish;
-        end
-
-        if (DATA_WIDTH == 32) begin
-            $error("Error: 32-bit XGMII is unimplemented!");
+        if ((DATA_WIDTH != 64)) begin
+            $error("Error: XGMII data width must be 64-bit");
             $finish;
         end
 
@@ -73,81 +68,41 @@ module xgmii_axis_bridge #(
         end
     end
 
-    generate
-        if (DATA_WIDTH == 32) begin
-            // Unimplemented
-            //
-            // 32-bit RX bridge instantiation
-            // xgmii_axis_bridge_rx_32b
-            // xgmii_axis_bridge_rx (
-            //     .clk(rx_clk),
-            //     .rst(rx_rst),
+    // 64-bit RX bridge instantiation
+    xgmii_axis_bridge_rx_64b
+    xgmii_axis_bridge_rx (
+        .clk(rx_clk),
+        .rst(rx_rst),
 
-            //     .xgmii_data(xgmii_rx_data),
-            //     .xgmii_ctrl(xgmii_rx_ctrl),
+        .xgmii_data(xgmii_rx_data),
+        .xgmii_ctrl(xgmii_rx_ctrl),
 
-            //     .axis_tready(axis_rx_tready),
-            //     .axis_tvalid(axis_rx_tvalid),
-            //     .axis_tdata(axis_rx_tdata),
-            //     .axis_tlast(axis_rx_tlast),
-            //     .axis_tkeep(axis_rx_tkeep),
+        .axis_tready(axis_rx_tready),
+        .axis_tvalid(axis_rx_tvalid),
+        .axis_tdata(axis_rx_tdata),
+        .axis_tlast(axis_rx_tlast),
+        .axis_tkeep(axis_rx_tkeep),
 
-            //     .error_ready(rx_error_ready),
-            //     .error_preamble(rx_error_preamble),
-            //     .error_xgmii(rx_error_xgmii));
+        .error_ready(rx_error_ready),
+        .error_preamble(rx_error_preamble),
+        .error_xgmii(rx_error_xgmii));
 
-            // // 32-bit TX bridge instantiation
-            // xgmii_axis_bridge_tx_32b
-            // xgmii_axis_bridge_tx (
-            //     .clk(tx_clk),
-            //     .rst(tx_rst),
+    // 64-bit TX bridge instantiation
+    xgmii_axis_bridge_tx_64b
+    xgmii_axis_bridge_tx (
+        .clk(tx_clk),
+        .rst(tx_rst),
 
-            //     .xgmii_data(xgmii_tx_data),
-            //     .xgmii_ctrl(xgmii_tx_ctrl),
+        .xgmii_data(xgmii_tx_data),
+        .xgmii_ctrl(xgmii_tx_ctrl),
 
-            //     .axis_tready(axis_tx_tready),
-            //     .axis_tvalid(axis_tx_tvalid),
-            //     .axis_tdata(axis_tx_tdata),
-            //     .axis_tlast(axis_tx_tlast),
-            //     .axis_tkeep(axis_tx_tkeep));
-        end else if (DATA_WIDTH == 64) begin
-            // 64-bit RX bridge instantiation
-            xgmii_axis_bridge_rx_64b
-            xgmii_axis_bridge_rx (
-                .clk(rx_clk),
-                .rst(rx_rst),
+        .axis_tready(axis_tx_tready),
+        .axis_tvalid(axis_tx_tvalid),
+        .axis_tdata(axis_tx_tdata),
+        .axis_tlast(axis_tx_tlast),
+        .axis_tkeep(axis_tx_tkeep),
 
-                .xgmii_data(xgmii_rx_data),
-                .xgmii_ctrl(xgmii_rx_ctrl),
-
-                .axis_tready(axis_rx_tready),
-                .axis_tvalid(axis_rx_tvalid),
-                .axis_tdata(axis_rx_tdata),
-                .axis_tlast(axis_rx_tlast),
-                .axis_tkeep(axis_rx_tkeep),
-
-                .error_ready(rx_error_ready),
-                .error_preamble(rx_error_preamble),
-                .error_xgmii(rx_error_xgmii));
-
-            // 64-bit TX bridge instantiation
-            xgmii_axis_bridge_tx_64b
-            xgmii_axis_bridge_tx (
-                .clk(tx_clk),
-                .rst(tx_rst),
-
-                .xgmii_data(xgmii_tx_data),
-                .xgmii_ctrl(xgmii_tx_ctrl),
-
-                .axis_tready(axis_tx_tready),
-                .axis_tvalid(axis_tx_tvalid),
-                .axis_tdata(axis_tx_tdata),
-                .axis_tlast(axis_tx_tlast),
-                .axis_tkeep(axis_tx_tkeep),
-
-                .error_tlast_tkeep(tx_error_tlast_tkeep));
-        end
-    endgenerate
+        .error_tlast_tkeep(tx_error_tlast_tkeep));
 
 endmodule
 
