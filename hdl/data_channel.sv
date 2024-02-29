@@ -29,7 +29,7 @@ module si_data_channel
        input wire                       clk,
        input wire                       rst,
 
-        // Wishbone interface for statistics. Has adresses for 0-39
+        // Wishbone interface for statistics. Has addresses for 0-39
 `ifndef __ICARUS__
         wb_interface.slave               wb_statistics,
 `endif

@@ -195,7 +195,7 @@ module xgmii_axis_bridge_tx_64b #(
     end
 
     // Whether the current transmission is shifted, meaning that the packet's
-    // transmission started on the fifth octect within the 64-bit bus word. As a
+    // transmission started on the fifth octet within the 64-bit bus word. As a
     // consequence of the shifted transmission, given that we receive 64 valid
     // bits from the sink, we need to store and delay the upper half of the
     // current clock cycle's data to the next.
@@ -322,7 +322,7 @@ module xgmii_axis_bridge_tx_64b #(
         transmit_shifted_next = transmit_shifted;
         // Deficit idle count state
         dic_deleted_next = dic_deleted;
-        // Remainer of last packet, mod 4 (relevant for DIC)
+        // Remainder of last packet, mod 4 (relevant for DIC)
         last_packet_rem_next = last_packet_rem;
         // Combinational AXI4-Stream sink ready feedback
         axis_tready = 0;

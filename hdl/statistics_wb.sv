@@ -37,7 +37,7 @@
 // |      36 | invalid_packets     | Invalid Packets received in total. Also counts (for example) ARP and similar.                 |
 // |      40 | tag_rate            | Tags received over the last second. Updates every second.                                     |
 // |      44 | received_tags       | Number of tags received in total. Can wrap in a few seconds                                   |
-// |      48 | overflowed          | If `1` indicates that an overflow has occured inside the TTX                                  |
+// |      48 | overflowed          | If `1` indicates that an overflow has occurred inside the TTX                                 |
 
 // Note: All statistics exclude the header with a size of 128 bit.
 module si_statistics_wb

@@ -198,7 +198,7 @@ module histogram_wrapper #(
 								reset_hist_module	<= wb.dat_i[2];
 
 								if (wb.dat_i[2]) begin
-							 		// deassert the wb.ack until reseting the whole BRAMs
+							 		// deassert the wb.ack until resetting the whole BRAMs
 									wb.ack <= 0;
 									if (last_sample) begin
 										wb.ack <= 1;
@@ -215,7 +215,7 @@ module histogram_wrapper #(
 						 	8'b000010??: wb.dat_o <= hist_is_running;
 						 	8'b000011??: wb.dat_o <= config_data;
 						 	8'b000100??: wb.dat_o <= 0;
-							// If the output FIFO is not empty, the data will be available immidiately,
+							// If the output FIFO is not empty, the data will be available immediately,
 							// otherwise, we should delay asserting wb.ack until arriving a new data
 						 	8'b000101??: begin
 								wb.dat_o <= fifo_dout;
@@ -349,7 +349,7 @@ module histogram_wrapper #(
 			//----------------------------------------------------------//
 			// Computing the statistics
 			/*
-			ofsset = ∑n*x(n) / ∑x(n);
+			offset = ∑n*x(n) / ∑x(n);
 			variance = ∑(x(n)*(n-offset)*(n-offset)) / ∑x(n)
 					 = (∑n*n*x(n) -2*offset*∑n*x(n) + offset*offset*∑x(n)) / ∑x(n)
 

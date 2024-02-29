@@ -374,7 +374,7 @@ module xgmii_axis_bridge_rx_64b (
                       axis_tkeep <= {tkeep_enc_p[3:0], 4'hF};
                       fsm_state <= FSM_IDLE;
                   end
-                  // Finally, we need to check whether the first octect of the
+                  // Finally, we need to check whether the first octet of the
                   // upper half of the current bus word constitutes the end of
                   // frame. This would mean that XGMII_END would be the first
                   // byte of the next shifted bus word we process, and thus the
@@ -390,7 +390,7 @@ module xgmii_axis_bridge_rx_64b (
                       // the signals and IDLE won't consider the upper (for us
                       // future) half of the current XGMII bus word any more.
                   end else begin
-                      // If none of the above, enitre word is valid data.
+                      // If none of the above, entire word is valid data.
                       axis_tlast <= 0;
                       axis_tkeep <= 8'hFF;
                   end

@@ -44,7 +44,7 @@ module histogram  #(
        If hist_read_start remains high for more than one clock
        cycle, its value would be discarded until the next rising
        edge of this input, indicating that if this signal is still
-       high while all memory data has beed read, next reading is
+       high while all memory data has been read, next reading is
        not initiated until the next rising edge of this signal.
     */
     input wire hist_read_start,
@@ -62,7 +62,7 @@ module histogram  #(
        are gathered until asserting hist_reset and hist_read_start.
        During reading the histogram memory, if hist_reset is not asserted,
        it indicates that a longer measurement is intended, and there is no
-       need to provide new congiguration. Otherwise, if hist_reset is asserted,
+       need to provide new configuration. Otherwise, if hist_reset is asserted,
        all the config.s should be set again.
     */
     input wire config_en,
@@ -112,7 +112,7 @@ module histogram  #(
         case (state)
             INITIAL_CONFIG: begin
                 new_config <= 0;
-                // if new config is available, start measurment
+                // if new config is available, start measurement
                 if (config_en && !r1config_en) begin
                     state <= DATA_GATHERING;
                 end
@@ -133,7 +133,7 @@ module histogram  #(
             end
             // data will be read in this state if hist_reset_reg is zero.
             // It means that when we want to read the histogram will do not
-            // want to abort the measurment, we continue reading.
+            // want to abort the measurement, we continue reading.
             MEM_READ: begin
                 if (read_completed) begin
                     state <= DATA_GATHERING;
@@ -172,7 +172,7 @@ module histogram  #(
 
     end
 
-    // Process the input data if we are doing continues measurment,
+    // Process the input data if we are doing continues measurement,
     // or only the read memory is requested, or the read and reset memory
     // is asserted but during reading the data through the wb interface,
     // a new configuration is asserted. Therefore, there is no need to wait
@@ -242,7 +242,7 @@ module histogram  #(
         // resetting detected_start_data for next measurement
         // This signal is reset when we want to do a measurement with
         // different channels. In this case, reset_mem is asserted, and
-        // this signal is deasserted. For contineous measurment, this signal
+        // this signal is deasserted. For contineous measurement, this signal
         // is not deasserted. Therefore, after reading out the hisogram memory,
         // it can be updated with the last start data.
         if (reset_mem) begin
@@ -304,7 +304,7 @@ module histogram  #(
     endgenerate
 
     //------------------------------------------------------------------//
-    // implemetation of Histogram module
+    // implementation of Histogram module
 
     // supports up to four tags
     wire [NUM_OF_TAGS * HIST_WORD_SIZE - 1 : 0] hist_dout[2];
