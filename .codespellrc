@@ -1,0 +1,5 @@
+[codespell]
+skip = *.po,*.pdf,*.svg,*.vi,*.ts,*.sh,*.bat,*.nb,externals,wrappers,cmake,tests,_*,fig*,build
+#quiet-level = 3
+ignore-words = .codespell_ignore_words.txt
+builtin = clear,rare,en-GB_to_en-US

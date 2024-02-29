@@ -1,0 +1,14 @@
+.lint-job-default-config:
+  stage: meta
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $SW_RUN_LINT_STAGE != ""
+
+codespell:
+  extends: .lint-job-default-config
+  before_script:
+    - PATH=$PATH:/home/gitlab-runner/.local/bin # PATH variable is no set when using non interactive shell via ssh
+  script:
+    - codespell -s ./*.md hdl/* target/* scripts/*
+  artifacts:
+  tags: [pkgubuntu2204]

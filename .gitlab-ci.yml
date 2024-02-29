@@ -1,7 +1,9 @@
 include:
+    - local: '.gitlab-ci-stage-meta.yml'
     - local: '.gitlab-ci-stage-hdl-tests.yml'
 
 stages:
+    - meta
     - hdl-tests
 
 variables:
