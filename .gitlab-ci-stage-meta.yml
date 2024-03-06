@@ -7,8 +7,22 @@
 codespell:
   extends: .lint-job-default-config
   before_script:
-    - PATH=$PATH:/home/gitlab-runner/.local/bin # PATH variable is no set when using non interactive shell via ssh
+    - PATH=$PATH:/home/gitlab-runner/.local/bin # Codespell is installed by pip
   script:
     - codespell -s ./*.md hdl/* target/* scripts/*
   artifacts:
   tags: [pkgubuntu2204]
+
+autopep8:
+  extends: .lint-job-default-config
+  script:
+    - find host/ target/*/host/ scripts/ test/ -iname "*.py" -print0 | xargs -0 autopep8 --diff
+  artifacts:
+  tags: [pkgubuntu2204]
+
+verible-verilog-format:
+  extends: .lint-job-default-config
+  script:
+    - find hdl/ tb/ target/*/hdl/ -iname "*.sv" -print0 | xargs -0 verible-verilog-format --verify --flagfile .verible-verilog-format.conf --inplace
+  artifacts:
+  tags: [vivado]
