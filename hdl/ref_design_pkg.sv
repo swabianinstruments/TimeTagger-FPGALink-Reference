@@ -33,44 +33,51 @@ package pkg_base_address;
 
     localparam DEFAULT_DEPTH = 256;
 
-    localparam base_address_top_module  = 32'h00000000;
-    localparam memory_size_top_module   = DEFAULT_DEPTH;
+    localparam base_address_top_module = 32'h00000000;
+    localparam memory_size_top_module = DEFAULT_DEPTH;
 
-    localparam base_address_sfpp_i2c    = 32'h80000200;
-    localparam memory_size_sfpp_i2c     = DEFAULT_DEPTH;
+    localparam base_address_sfpp_i2c = 32'h80000200;
+    localparam memory_size_sfpp_i2c = DEFAULT_DEPTH;
 
-    localparam base_address_ethernet    = 32'h80001500;
-    localparam memory_size_ethernet     = DEFAULT_DEPTH;
+    localparam base_address_ethernet = 32'h80001500;
+    localparam memory_size_ethernet = DEFAULT_DEPTH;
 
-    localparam base_address_statistics  = 32'h80005100;
-    localparam memory_size_statistics   = DEFAULT_DEPTH;
+    localparam base_address_statistics = 32'h80005100;
+    localparam memory_size_statistics = DEFAULT_DEPTH;
 
     localparam base_address_user_design = 32'h80005200;
-    localparam memory_size_user_design  = 512;
+    localparam memory_size_user_design = 512;
 
-    localparam base_address_histogram   = 32'h80006000;
-    localparam memory_size_histogram    = DEFAULT_DEPTH;
+    localparam base_address_histogram = 32'h80006000;
+    localparam memory_size_histogram = DEFAULT_DEPTH;
 
-    enum{top_module, i2c_master, ethernet, statistics, user_sample, histogram} wb_instances;
+    enum {
+        top_module,
+        i2c_master,
+        ethernet,
+        statistics,
+        user_sample,
+        histogram
+    } wb_instances;
 
     localparam WB_SIZE = wb_instances.num();
 
     localparam integer base_address[WB_SIZE] = '{
-                                                    base_address_top_module,
-                                                    base_address_sfpp_i2c,
-                                                    base_address_ethernet,
-                                                    base_address_statistics,
-                                                    base_address_user_design,
-                                                    base_address_histogram
-                                                    };
+        base_address_top_module,
+        base_address_sfpp_i2c,
+        base_address_ethernet,
+        base_address_statistics,
+        base_address_user_design,
+        base_address_histogram
+    };
 
     localparam integer memory_space[WB_SIZE] = '{
-                                                    memory_size_top_module,
-                                                    memory_size_sfpp_i2c,
-                                                    memory_size_ethernet,
-                                                    memory_size_statistics,
-                                                    memory_size_user_design,
-                                                    memory_size_histogram
-                                                    };
+        memory_size_top_module,
+        memory_size_sfpp_i2c,
+        memory_size_ethernet,
+        memory_size_statistics,
+        memory_size_user_design,
+        memory_size_histogram
+    };
 
 endpackage

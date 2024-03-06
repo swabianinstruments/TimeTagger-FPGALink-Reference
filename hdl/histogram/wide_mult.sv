@@ -15,9 +15,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-`resetall
-`timescale 1ns / 1ps
-`default_nettype none
+// verilog_format: off
+ `resetall
+ `timescale 1ns / 1ps
+ `default_nettype none
+// verilog_format: on
 
 module wide_mult #(
     parameter INPUT1_WIDTH    = 24,
@@ -26,25 +28,23 @@ module wide_mult #(
     parameter INPUT2_UNSIGNED = 1, // 1 == unsigned, 0 == signed
     parameter OUTPUT_WIDTH = INPUT1_WIDTH + INPUT2_WIDTH,
     parameter LATENCY = 6  // at least two clock cycles
-)
-
-(
+) (
     input wire clk,
     input wire [INPUT1_WIDTH - 1 : 0] din1,
     input wire [INPUT2_WIDTH - 1 : 0] din2,
-    output wire [OUTPUT_WIDTH - 1 : 0] dout // The output would be unsigned if both inputs are unsigned
-                                            // otherwise, the output would be signed
-    );
+    output wire [OUTPUT_WIDTH - 1 : 0] dout  // The output would be unsigned if both inputs are unsigned
+                                             // otherwise, the output would be signed
+);
     initial begin
-        if (!((INPUT1_UNSIGNED == 0)||(INPUT1_UNSIGNED == 1))) begin
+        if (!((INPUT1_UNSIGNED == 0) || (INPUT1_UNSIGNED == 1))) begin
             $error("Error: INPUT1_UNSIGNED should be zero or one.");
             $finish;
         end
-        if (!((INPUT2_UNSIGNED == 0)||(INPUT2_UNSIGNED == 1))) begin
+        if (!((INPUT2_UNSIGNED == 0) || (INPUT2_UNSIGNED == 1))) begin
             $error("Error: INPUT2_UNSIGNED should be zero or one.");
             $finish;
         end
-        if (LATENCY <2) begin
+        if (LATENCY < 2) begin
             $error("Error: LATENCY should be at least 2.");
             $finish;
         end
@@ -76,12 +76,12 @@ module wide_mult #(
     always @(posedge clk) begin
         mult <= $signed(r0din1) * $signed(r0din2);
         delay_buf[0] <= mult;
-        for (int i = 1; i < LATENCY - 1 ; i++) begin
-            delay_buf[i] <= delay_buf[i - 1];
+        for (int i = 1; i < LATENCY - 1; i++) begin
+            delay_buf[i] <= delay_buf[i-1];
         end
     end
     // The real output size should be INPUT1_WIDTH + INPUT2_WIDTH.
     // If the required size is smaller, the upper bits will be selected.
-    assign dout = delay_buf[LATENCY - 2][INPUT1_WIDTH + INPUT2_WIDTH-1 -: OUTPUT_WIDTH];
+    assign dout = delay_buf[LATENCY-2][INPUT1_WIDTH+INPUT2_WIDTH-1-:OUTPUT_WIDTH];
 
 endmodule

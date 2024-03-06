@@ -17,9 +17,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-`resetall
-`timescale 1ns / 1ps
-`default_nettype none
+// verilog_format: off
+ `resetall
+ `timescale 1ns / 1ps
+ `default_nettype none
+// verilog_format: on
 
 // This module receives the tag stream and sets the first 2 leds based on the first 2 channels
 // The data will arrive sorted from the timetagger, so the time & subtimes can be ignored for this purpose
@@ -47,107 +49,107 @@
 //
 // Note: You can replicate much of this functionality with the Vivado ILA and adding multiple ANDed triggers with comparators
 module user_sample #(
-     parameter WORD_WIDTH = 4
+    parameter WORD_WIDTH = 4
 ) (
-     input wire                  clk,
-     input wire                  rst,
+    input wire clk,
+    input wire rst,
 
-     // 1 if the word is valid and tkeep needs to be checked, 0 if the full word is invalid
-     input wire                  s_axis_tvalid,
-     // 1 if this module is able to accept new data in this clock period. Must always be 1
-     output wire                 s_axis_tready,
-     // The time the tag was captured at in 1/3 ps since the startup of the TTX
-     input wire [64-1:0]         s_axis_tagtime [WORD_WIDTH-1:0],
-     // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
-     input wire signed [5:0]     s_axis_channel [WORD_WIDTH-1:0],
-     // 1 for a valid event, 0 for no event
-     input wire [WORD_WIDTH-1:0] s_axis_tkeep,
+    // 1 if the word is valid and tkeep needs to be checked, 0 if the full word is invalid
+    input  wire                         s_axis_tvalid,
+    // 1 if this module is able to accept new data in this clock period. Must always be 1
+    output wire                         s_axis_tready,
+    // The time the tag was captured at in 1/3 ps since the startup of the TTX
+    input  wire        [        64-1:0] s_axis_tagtime[WORD_WIDTH-1:0],
+    // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
+    input  wire signed [           5:0] s_axis_channel[WORD_WIDTH-1:0],
+    // 1 for a valid event, 0 for no event
+    input  wire        [WORD_WIDTH-1:0] s_axis_tkeep,
 
-     wb_interface.slave          wb,
+    wb_interface.slave wb,
 
-     output reg [5:0]            led
+    output reg [5:0] led
 );
 
-// This module is always ready to accept new data
-assign s_axis_tready = 1;
+    // This module is always ready to accept new data
+    assign s_axis_tready = 1;
 
-reg [31:0]                     cnt;
-reg [15:0]                     tag_counter;
-reg [$clog2(WORD_WIDTH+1)-1:0] tag_counter_inc;
-always @(posedge clk) begin
-     if (rst) begin
-          led[4:0] <= 0;
-          cnt <= 0;
-          tag_counter <= 0;
-          tag_counter_inc = 0;
-     end else begin
-          tag_counter_inc = 0;
-          for(int i = 0; i < WORD_WIDTH; i += 1) begin
-               if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i]) begin
+    reg [                    31:0] cnt;
+    reg [                    15:0] tag_counter;
+    reg [$clog2(WORD_WIDTH+1)-1:0] tag_counter_inc;
+    always @(posedge clk) begin
+        if (rst) begin
+            led[4:0] <= 0;
+            cnt <= 0;
+            tag_counter <= 0;
+            tag_counter_inc = 0;
+        end else begin
+            tag_counter_inc = 0;
+            for (int i = 0; i < WORD_WIDTH; i += 1) begin
+                if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i]) begin
                     unique case (s_axis_channel[i])
-                         5'h01: begin
-                              led[0] <= !s_axis_channel[i][5];
-                         end
-                         5'h02: begin
-                              led[1] <= !s_axis_channel[i][5];
-                         end
-                         default: ;
+                        5'h01: begin
+                            led[0] <= !s_axis_channel[i][5];
+                        end
+                        5'h02: begin
+                            led[1] <= !s_axis_channel[i][5];
+                        end
+                        default: ;
                     endcase
-                    cnt <= 31250000*2; // ~200ms
+                    cnt <= 31250000 * 2;  // ~200ms
                     tag_counter_inc = tag_counter_inc + 1;
-               end
-          end
-          tag_counter <= tag_counter + tag_counter_inc;
-          // keep the activity LED on for around 200ms
-          if (cnt > 0) begin
-               cnt <= cnt - 1;
-               led[4] <= 1;
-          end else begin
-               led[4] <= 0;
-          end
-          led[3:2] = tag_counter[15:14];
-     end
-end
+                end
+            end
+            tag_counter <= tag_counter + tag_counter_inc;
+            // keep the activity LED on for around 200ms
+            if (cnt > 0) begin
+                cnt <= cnt - 1;
+                led[4] <= 1;
+            end else begin
+                led[4] <= 0;
+            end
+            led[3:2] = tag_counter[15:14];
+        end
+    end
 
-reg [31:0] user_control;
-reg [5:0]  channel_select;
-reg [63:0] lower_bound;
-reg [63:0] upper_bound;
-reg [63:0]  failed;
+    reg [31:0] user_control;
+    reg [ 5:0] channel_select;
+    reg [63:0] lower_bound;
+    reg [63:0] upper_bound;
+    reg [63:0] failed;
 
-reg [63:0] tagtimes             [WORD_WIDTH-1:0];
-reg        tagtimes_valid       [WORD_WIDTH-1:0];
-reg [63:0] tagtimes_p           [WORD_WIDTH-1:0];
-reg        tagtimes_valid_p     [WORD_WIDTH-1:0];
-reg [63:0] prev_tagtime_blocking;
-reg        prev_tagtime_valid_blocking;
-reg [63:0] prev_tagtimes        [WORD_WIDTH-1:0];
-reg        prev_tagtimes_valid  [WORD_WIDTH-1:0];
-reg [63:0] tagtime_diff         [WORD_WIDTH-1:0];
-reg        tagtime_diff_valid   [WORD_WIDTH-1:0];
-reg [63:0] tagtime_diff_p       [WORD_WIDTH-1:0];
-reg        tagtime_diff_p_error [WORD_WIDTH-1:0];
-always @(posedge clk) begin
-     if (rst || (user_control != 0)) begin
-          led[5] <= 1'b0;
-          failed <= 64'h0;
-          prev_tagtime_blocking = 'x;
-          prev_tagtime_valid_blocking = 0;
-          for(int i = 0; i < WORD_WIDTH; i += 1) begin
-               tagtimes[i] <= 'x;
-               tagtimes_p[i] <= 'x;
-               tagtimes_valid[i] <= 0;
-               tagtimes_valid_p[i] <= 0;
-               prev_tagtimes[i] <= 'x;
-               prev_tagtimes_valid[i] <= 0;
-               tagtime_diff[i] <= 'x;
-               tagtime_diff_valid[i] <= 0;
-               tagtime_diff_p[i] <= 'x;
-               tagtime_diff_p_error[i] <= 0;
-          end
-     end else begin
-          for(int i = 0; i < WORD_WIDTH; i += 1) begin
-               /*
+    reg [63:0] tagtimes                    [WORD_WIDTH-1:0];
+    reg        tagtimes_valid              [WORD_WIDTH-1:0];
+    reg [63:0] tagtimes_p                  [WORD_WIDTH-1:0];
+    reg        tagtimes_valid_p            [WORD_WIDTH-1:0];
+    reg [63:0] prev_tagtime_blocking;
+    reg        prev_tagtime_valid_blocking;
+    reg [63:0] prev_tagtimes               [WORD_WIDTH-1:0];
+    reg        prev_tagtimes_valid         [WORD_WIDTH-1:0];
+    reg [63:0] tagtime_diff                [WORD_WIDTH-1:0];
+    reg        tagtime_diff_valid          [WORD_WIDTH-1:0];
+    reg [63:0] tagtime_diff_p              [WORD_WIDTH-1:0];
+    reg        tagtime_diff_p_error        [WORD_WIDTH-1:0];
+    always @(posedge clk) begin
+        if (rst || (user_control != 0)) begin
+            led[5] <= 1'b0;
+            failed <= 64'h0;
+            prev_tagtime_blocking = 'x;
+            prev_tagtime_valid_blocking = 0;
+            for (int i = 0; i < WORD_WIDTH; i += 1) begin
+                tagtimes[i] <= 'x;
+                tagtimes_p[i] <= 'x;
+                tagtimes_valid[i] <= 0;
+                tagtimes_valid_p[i] <= 0;
+                prev_tagtimes[i] <= 'x;
+                prev_tagtimes_valid[i] <= 0;
+                tagtime_diff[i] <= 'x;
+                tagtime_diff_valid[i] <= 0;
+                tagtime_diff_p[i] <= 'x;
+                tagtime_diff_p_error[i] <= 0;
+            end
+        end else begin
+            for (int i = 0; i < WORD_WIDTH; i += 1) begin
+                /*
                // reference implementation without pipeline stages
                if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i] && channel_select == s_axis_channel[i]) begin
                     if (prev_tagtime_valid_blocking) begin
@@ -163,78 +165,78 @@ always @(posedge clk) begin
                end
                */
 
-               // First pipeline stage (full parallel): Select if this lane is active
-               tagtimes[i] <= 'x;
-               tagtimes_valid[i] <= 0;
-               if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i] && channel_select == s_axis_channel[i]) begin
+                // First pipeline stage (full parallel): Select if this lane is active
+                tagtimes[i] <= 'x;
+                tagtimes_valid[i] <= 0;
+                if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i] && channel_select == s_axis_channel[i]) begin
                     tagtimes[i] <= s_axis_tagtime[i];
                     tagtimes_valid[i] <= 1;
-               end
+                end
 
-               // Second pipeline stage (blocking statements): Mux the previous active event
-               tagtimes_p[i] <= tagtimes[i];
-               tagtimes_valid_p[i] <= tagtimes_valid[i];
-               prev_tagtimes[i] <= prev_tagtime_blocking;
-               prev_tagtimes_valid[i] <= prev_tagtime_valid_blocking;
-               if (tagtimes_valid[i]) begin
+                // Second pipeline stage (blocking statements): Mux the previous active event
+                tagtimes_p[i] <= tagtimes[i];
+                tagtimes_valid_p[i] <= tagtimes_valid[i];
+                prev_tagtimes[i] <= prev_tagtime_blocking;
+                prev_tagtimes_valid[i] <= prev_tagtime_valid_blocking;
+                if (tagtimes_valid[i]) begin
                     // Assign the blocking registers, so they will be available for both the next lane and the next clock cycle
                     // Note: The order here matters. These registers must be set *after* they are used a few lines ago.
                     prev_tagtime_blocking = tagtimes[i];
                     prev_tagtime_valid_blocking = tagtimes_valid[i];
-               end
+                end
 
-               // Third pipeline stage (full parallel): Calculate the time differences
-               tagtime_diff[i] <= tagtimes_p[i] - prev_tagtimes[i];
-               tagtime_diff_valid[i] <= tagtimes_valid_p[i] && prev_tagtimes_valid[i];
+                // Third pipeline stage (full parallel): Calculate the time differences
+                tagtime_diff[i] <= tagtimes_p[i] - prev_tagtimes[i];
+                tagtime_diff_valid[i] <= tagtimes_valid_p[i] && prev_tagtimes_valid[i];
 
-               // Fourth pipeline stage (full parallel): Calculate if this time difference is an error
-               tagtime_diff_p[i] <= tagtime_diff[i];
-               tagtime_diff_p_error[i] <= tagtime_diff_valid[i] && (tagtime_diff[i] < lower_bound || tagtime_diff[i] > upper_bound);
+                // Fourth pipeline stage (full parallel): Calculate if this time difference is an error
+                tagtime_diff_p[i] <= tagtime_diff[i];
+                tagtime_diff_p_error[i] <= tagtime_diff_valid[i] && (tagtime_diff[i] < lower_bound || tagtime_diff[i] > upper_bound);
 
-               // Fiveth pipeline stage (last active lane): Mux the failing time difference
-               if (tagtime_diff_p_error[i]) begin
+                // Fiveth pipeline stage (last active lane): Mux the failing time difference
+                if (tagtime_diff_p_error[i]) begin
                     failed <= tagtime_diff_p[i];
                     failed[63] <= 1;
                     led[5] <= 1'b1;
-               end
-          end
-     end
-end
+                end
+            end
+        end
+    end
 
-always @(posedge clk) begin
-     wb.ack <= 0;
-     if (rst) begin
-          wb.dat_o <= 0;
-          user_control <= 0;
-          channel_select <= 1;
-          lower_bound <= 64'h0000000000660000;
-          upper_bound <= 64'h0000000000680000;
-     end else if (wb.cyc && wb.stb) begin
-          wb.ack <= 1;
-          if (wb.we) begin
-               // Write
-               unique casez (wb.adr[7:0])
+    always @(posedge clk) begin
+        wb.ack <= 0;
+        if (rst) begin
+            wb.dat_o <= 0;
+            user_control <= 0;
+            channel_select <= 1;
+            lower_bound <= 64'h0000000000660000;
+            upper_bound <= 64'h0000000000680000;
+        end else if (wb.cyc && wb.stb) begin
+            wb.ack <= 1;
+            if (wb.we) begin
+                // Write
+                unique casez (wb.adr[7:0])
                     8'b000010??: user_control <= wb.dat_i;
                     8'b000011??: channel_select <= wb.dat_i;
-                    8'b00010???: lower_bound[(wb.adr & 4) * 8 +: 32] <= wb.dat_i;
-                    8'b00011???: upper_bound[(wb.adr & 4) * 8 +: 32] <= wb.dat_i;
+                    8'b00010???: lower_bound[(wb.adr&4)*8+:32] <= wb.dat_i;
+                    8'b00011???: upper_bound[(wb.adr&4)*8+:32] <= wb.dat_i;
                     default: ;
-               endcase
-          end else begin
-               // Read
-               unique casez (wb.adr[7:0])
+                endcase
+            end else begin
+                // Read
+                unique casez (wb.adr[7:0])
                     // Indicate the bus slave is present in the design
                     8'b000000??: wb.dat_o <= 1;
                     8'b000010??: wb.dat_o <= user_control;
                     8'b000011??: wb.dat_o <= channel_select;
-                    8'b00010???: wb.dat_o <= lower_bound[(wb.adr & 4) * 8 +: 32];
-                    8'b00011???: wb.dat_o <= upper_bound[(wb.adr & 4) * 8 +: 32];
-                    8'b00100???: wb.dat_o <= failed[(wb.adr & 4) * 8 +: 32];
+                    8'b00010???: wb.dat_o <= lower_bound[(wb.adr&4)*8+:32];
+                    8'b00011???: wb.dat_o <= upper_bound[(wb.adr&4)*8+:32];
+                    8'b00100???: wb.dat_o <= failed[(wb.adr&4)*8+:32];
                     default: wb.dat_o <= 32'h00000000;
-               endcase
-          end
-     end else begin
-          wb.dat_o <= 0;
-     end
-end
+                endcase
+            end
+        end else begin
+            wb.dat_o <= 0;
+        end
+    end
 endmodule
