@@ -1,7 +1,8 @@
 .hdl-test-job-default-config:
   stage: hdl-tests
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH != "master"'
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_PROTECTED == "true"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   tags: [vivado]
 
 cocotb-tests-highspeedin:

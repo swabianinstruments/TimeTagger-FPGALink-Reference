@@ -1,8 +1,8 @@
 .lint-job-default-config:
   stage: meta
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $SW_RUN_LINT_STAGE != ""
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_PROTECTED == "true"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 codespell:
   extends: .lint-job-default-config
