@@ -20,6 +20,7 @@ from cocotbext.axi import (
 
 import misc
 
+
 @cocotb.test()
 async def data_channel_testbench(dut, packets=[]):
     rng = random.Random(42)
@@ -49,11 +50,13 @@ async def data_channel_testbench(dut, packets=[]):
     packet_contents = [
         {
             "wrap_count": rng.getrandbits(32),
-            "tags": [gen_tag(rng.getrandbits(12), rng.getrandbits(12), rng.getrandbits(6)) for i in range((rng.randrange(20) + 1) * 4)], # Ensure only 128 bit words are sent
+            # Ensure only 128 bit words are sent
+            "tags": [gen_tag(rng.getrandbits(12), rng.getrandbits(12), rng.getrandbits(6)) for i in range((rng.randrange(20) + 1) * 4)],
         } for i in range(20)
     ]
     # send sucessive packets
-    packets = [gen_packet(contents["tags"], sequence, contents["wrap_count"]) for (sequence, contents) in enumerate(packet_contents)]
+    packets = [gen_packet(contents["tags"], sequence, contents["wrap_count"])
+               for (sequence, contents) in enumerate(packet_contents)]
 
     async def custom_clock():
         # pre-construct triggers for performance
@@ -113,14 +116,13 @@ async def data_channel_testbench(dut, packets=[]):
         while axis_sink.empty():
             await RisingEdge(dut.clk)
 
-
         p = await axis_sink.recv()
         recv_packets += [p]
 
     for pc, rp in zip(packet_contents, recv_packets):
         assert len(pc["tags"]) * 4 == len(rp.tdata)
 
-        tag_bytes =  []
+        tag_bytes = []
         for tag in pc["tags"]:
             tag_bytes += tag.to_bytes(4, byteorder="little")
 

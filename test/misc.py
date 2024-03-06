@@ -1,5 +1,5 @@
 # Common Test Infrastructure.
-# 
+#
 # This file is part of the Time Tagger software defined digital data
 # acquisition FPGA-link reference design.
 #
@@ -16,6 +16,7 @@
 import tempfile
 from pathlib import Path
 from cocotb_test.simulator import run
+
 
 def cocotb_test(dut, test_module, verilog_sources, parameters={}, extra_env={}):
     tests_dir = Path(__file__).parent

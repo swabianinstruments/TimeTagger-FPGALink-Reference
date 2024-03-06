@@ -17,6 +17,7 @@ from enum import IntEnum
 
 from .i2c import I2CInterface, I2CRW
 
+
 class WBI2CReg(IntEnum):
     PRER_LOW = 0
     PRER_HIGH = 1
@@ -25,6 +26,7 @@ class WBI2CReg(IntEnum):
     SR = 4
     TXR = 5
     CR = 6
+
 
 class WishboneI2C(I2CInterface):
     def __init__(self, wb, i2c_base):
@@ -46,7 +48,7 @@ class WishboneI2C(I2CInterface):
     def __read_wb(self, addr):
         if len(self.queued_wb_writes) > 0:
             for waddr, val in self.queued_wb_writes:
-                self.wb.write(waddr,val)
+                self.wb.write(waddr, val)
 
             self.queued_wb_writes = []
 
@@ -58,7 +60,7 @@ class WishboneI2C(I2CInterface):
     def flush_writes(self):
 
         for waddr, val in self.queued_wb_writes:
-            self.wb.write(waddr,val)
+            self.wb.write(waddr, val)
         self.queued_wb_writes = []
 
     def queue_wb_writes(self, queue_writes=True):
@@ -82,7 +84,7 @@ class WishboneI2C(I2CInterface):
         assert 0 <= addr <= 127
 
         # Enforce usage of the I2CRW enum
-        assert type(rw) == I2CRW
+        assert isinstance(rw, I2CRW)
 
         # Write the slave address to the RXR register
         self.__write_wb(WBI2CReg.RXR, (addr << 1) | int(rw))

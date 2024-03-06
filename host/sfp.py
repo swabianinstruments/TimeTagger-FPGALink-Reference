@@ -26,6 +26,7 @@ from .i2c import I2CRW, MockI2CBus, MockI2CSlave, I2CInterface
 from .ok_wishbone import Wishbone
 from .xem_i2c import WishboneI2C
 
+
 class SFPType(IntEnum):
     # Invalid value, not part of the specification
     INVALID = -1
@@ -62,6 +63,7 @@ class SFPType(IntEnum):
     MINILINKX8 = 0x1D
     QSFPPCMIS = 0x1E
 
+
 class SFPConnector(IntEnum):
     # Invalid value, not part of the specification
     INVALID = -1
@@ -89,6 +91,7 @@ class SFPConnector(IntEnum):
     SN = 0x26
     MPO2X12 = 0x27
     MPO1X16 = 0x28
+
 
 class SFPMock(MockI2CSlave):
     def __init__(self, dump, log=None):
@@ -150,6 +153,7 @@ class SFPMock(MockI2CSlave):
             return self.regs[self.i2c_addr << 1][self.reg_addr]
         else:
             raise NotImplementedError(f"SFP: Unexpected produce() in {self.i2c_state}")
+
 
 class I2CSFP():
     class SFPBank(IntEnum):
@@ -438,6 +442,7 @@ class I2CSFP():
                   + f"{v['bounds']['neg_warning']:8.3f} "
                   + f"{v['bounds']['neg_error']:8.3f}")
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Interact with the SFP(+) module I2C interface")
@@ -541,6 +546,7 @@ def main():
             print()
     else:
         raise NotImplementedError()
+
 
 if __name__ == "__main__":
     main()
