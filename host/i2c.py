@@ -107,7 +107,7 @@ class MockI2CBus(I2CInterface):
             s.start_cond(self.curtxn_addr, rw)
 
     def stop(self):
-        # Peform some basic sanity checks
+        # Perform some basic sanity checks
         I2CInterface.stop(self)
 
         if self.curtxn_valid:
@@ -118,7 +118,7 @@ class MockI2CBus(I2CInterface):
         self.curtxn_valid = False
 
     def write(self, data):
-        # Peform some basic sanity checks
+        # Perform some basic sanity checks
         I2CInterface.write(self, data)
 
         # We need some valid transaction to issue a write
@@ -130,7 +130,7 @@ class MockI2CBus(I2CInterface):
             s.consume(data)
 
     def read_ack_stop(self):
-        # Peform some basic sanity checks
+        # Perform some basic sanity checks
         I2CInterface.read_ack_stop(self)
 
         # We need some valid transaction to read

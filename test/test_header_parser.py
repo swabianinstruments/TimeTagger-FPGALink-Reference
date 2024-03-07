@@ -54,7 +54,7 @@ async def header_parser_testbench(dut, packets=[]):
         header += wrap_count.to_bytes(4, byteorder="little")
         return header + data
 
-    # send sucessive packets
+    # send successive packets
     packets = [gen_packet(b"\x00" * 20, i, 0) for i in range(100)]
 
     # Start the clock

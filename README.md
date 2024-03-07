@@ -46,6 +46,14 @@ This repository contains a work-in-progress, we're planning on implementing the 
 - Internal TTX changes to support the full 40GBit bandwidth
 - Softcore for IP management and various other tasks
 
+## Pre-commit hook
+
+To ensure that your contributions pass our internal formatting CI, you can add the following hook:
+
+``` sh
+ln -s ../../.pre-commit-hook.sh .git/hooks/pre-commit
+```
+
 ## License and Disclaimer
 
 Unless indicated otherwise, all files contained in this repository are licensed

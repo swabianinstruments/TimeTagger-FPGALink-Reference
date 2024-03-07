@@ -97,4 +97,4 @@ class Histogram:
                 self.prev_data_array = self.data_array
 
         else:
-            print("Warning: No data is abailable to read. Please first set the start and click channels using set_config function to start the measurement.")
+            print("Warning: No data is available to read. Please first set the start and click channels using set_config function to start the measurement.")

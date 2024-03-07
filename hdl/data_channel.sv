@@ -64,7 +64,7 @@ module si_data_channel #(
         end
         // - ensure that the output data-width is a multiple of 32 bits, to not split tags
         if ((DATA_WIDTH_OUT % 32) != 0) begin
-            $error("Error: DATA_WIDTH_OUT needs to be a multpile of 32 bits");
+            $error("Error: DATA_WIDTH_OUT needs to be a multiple of 32 bits");
             $finish;
         end
     end

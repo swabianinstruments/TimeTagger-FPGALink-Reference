@@ -9,7 +9,7 @@ codespell:
   before_script:
     - PATH=$PATH:/home/gitlab-runner/.local/bin # Codespell is installed by pip
   script:
-    - codespell -s ./*.md hdl/* target/* scripts/*
+    - codespell -s ./*.md hdl/ host/ scripts/ target/ tb/ test/
   artifacts:
   tags: [pkgubuntu2204]
 
