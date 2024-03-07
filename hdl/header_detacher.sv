@@ -51,7 +51,7 @@ module si_header_detacher #(
             $error("Error: data-width needs to be 256 bits or less");
             $finish;
         end
-        // - ensure that the wrap count is in a single word
+        // - ensure that the rollover count is in a single word
         if (DATA_WIDTH % 32 != 0) begin
             $error("Error: data-width needs to be a multiple of 32 bits");
             $finish;
@@ -74,7 +74,7 @@ module si_header_detacher #(
                 remaining_header_words <= remaining_header_words - 1;
             end
             if (remaining_header_words == 1) begin
-                m_axis_tuser <= s_axis_tdata[32*(DATA_WIDTH/32-1)+:32];  // Extract wrap count here
+                m_axis_tuser <= s_axis_tdata[32*(DATA_WIDTH/32-1)+:32];  // Extract rollover count here
             end
         end
     end

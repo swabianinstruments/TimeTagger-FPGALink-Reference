@@ -60,8 +60,8 @@ module si_tag_converter #(
 
     assign s_axis_tready = m_axis_tready || !m_axis_tvalid;
 
-    // Handle rollover of t_axis_tuser, should happen roughly every 6.5 hours
-    reg [31:0] rollover_time = 0;
+    // Handle a further rollover of t_axis_tuser (rollover_time), should happen roughly every 6.5 hours
+    reg [31:0] extended_rollover_time = 0;
     reg [31:0] s_axis_tuser_p;
     reg [63:0] lowest_time_bound_p1;
     reg [63:0] lowest_time_bound_p2;
@@ -69,7 +69,7 @@ module si_tag_converter #(
 
     always @(posedge clk) begin
         if (rst == 1) begin
-            rollover_time <= 0;
+            extended_rollover_time <= 0;
             s_axis_tuser_p <= 0;
             lowest_time_bound <= 0;
             lowest_time_bound_p1 <= 0;
@@ -78,12 +78,12 @@ module si_tag_converter #(
         end else if (s_axis_tready) begin
             if (s_axis_tvalid & (s_axis_tkeep != 0)) begin
                 s_axis_tuser_p <= s_axis_tuser;
-                // Rollover occurred
+                // Extended rollover occurred
                 if (s_axis_tuser_p > s_axis_tuser) begin
-                    rollover_time <= rollover_time + 1;
+                    extended_rollover_time <= extended_rollover_time + 1;
                 end
 
-                lowest_time_bound_p1 <= {rollover_time, s_axis_tuser_p, {12{1'b0}}} * 4000;
+                lowest_time_bound_p1 <= {extended_rollover_time, s_axis_tuser_p, {12{1'b0}}} * 4000;
             end
 
             // Delay to match the processing of the tagtime
@@ -111,20 +111,20 @@ module si_tag_converter #(
             reg [11:0] subtime;
             reg [63:0] tagtime_p;
             reg [31:0] tdata_p;
-            reg [31:0] wrap_count_p;
+            reg [31:0] rollover_time_p;
 
             always @(posedge clk) begin
                 if (rst == 1) begin
                     tagtime_p <= 0;
-                    wrap_count_p <= 0;
+                    rollover_time_p <= 0;
                     tdata_p <= 0;
                 end else if (s_axis_tready) begin
                     // Clear data if it's invalid
                     tdata_p <= (s_axis_tvalid & (s_axis_tkeep[4*i+:4] == 4'hF)) ? s_axis_tdata[32*i+:32] : 0;
-                    wrap_count_p <= s_axis_tuser;
+                    rollover_time_p <= s_axis_tuser;
 
                     subtime <= tdata_p[23:12];
-                    tagtime_p <= {rollover_time, wrap_count_p, tdata_p[11:0]} * 4000;
+                    tagtime_p <= {extended_rollover_time, rollover_time_p, tdata_p[11:0]} * 4000;
                     event_type <= tdata_p[31:30];
                     channel_number <= tdata_p[29:24];
 
