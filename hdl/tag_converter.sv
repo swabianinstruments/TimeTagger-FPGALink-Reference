@@ -56,6 +56,28 @@ module si_tag_converter #(
 );
 
     assign s_axis_tready = m_axis_tready || !m_axis_tvalid;
+
+    // Handle rollover of t_axis_tuser, should happen roughly every 6.5 hours
+    reg [31:0] rollover_time = 0;
+    reg [31:0] rollover_time_p;
+    reg [31:0] s_axis_tuser_p;
+
+    always @(posedge clk) begin
+        if (rst == 1) begin
+            rollover_time <= 0;
+            rollover_time_p <= 0;
+        end else begin
+             rollover_time_p <= rollover_time;
+             if(s_axis_tready & (s_axis_tvalid != 0) & (s_axis_tkeep != 0)) begin
+                  s_axis_tuser_p <= s_axis_tuser;
+                  // Rollover occurred
+                  if (s_axis_tuser_p > s_axis_tuser) begin
+                       rollover_time <= rollover_time + 1;
+                  end
+             end
+        end
+    end
+
     genvar i;
     generate
         for (i = 0; i < NUMBER_OF_WORDS; i += 1) begin
@@ -96,7 +118,7 @@ module si_tag_converter #(
                     tdata_p5 <= 0;
                     tdata_p6 <= 0;
                 end else if (s_axis_tready) begin
-                    tagtime_p <= {wrap_count_p2, counter} * 4000;
+                    tagtime_p <= {rollover_time_p, wrap_count_p2, counter} * 4000;
                     tagtime_p2 <= tagtime_p;
                     tagtime_p3 <= tagtime_p2 + subtime;
                     tagtime_p4 <= tagtime_p3;
