@@ -51,7 +51,11 @@ module si_tag_converter #(
     output reg        [64-1:0]       m_axis_tagtime[NUMBER_OF_WORDS-1:0],
     // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
     output reg signed [   5:0]       m_axis_channel[NUMBER_OF_WORDS-1:0],
-    output reg [NUMBER_OF_WORDS-1:0] m_axis_tkeep
+    output reg [NUMBER_OF_WORDS-1:0] m_axis_tkeep,
+
+    // Output of the lowest expected time for the next channels, to be able
+    // to know that in certain time frame events *didn't* occur. Same format as tagtime
+    output reg [64-1:0]               lowest_time_bound
 );
 
     assign s_axis_tready = m_axis_tready || !m_axis_tvalid;
@@ -59,16 +63,41 @@ module si_tag_converter #(
     // Handle rollover of t_axis_tuser, should happen roughly every 6.5 hours
     reg [31:0] rollover_time = 0;
     reg [31:0] s_axis_tuser_p;
+    reg [63:0] lowest_time_bound_p1;
+    reg [63:0] lowest_time_bound_p2;
+    reg [63:0] lowest_time_bound_p3;
 
     always @(posedge clk) begin
         if (rst == 1) begin
             rollover_time <= 0;
+            s_axis_tuser_p <= 0;
+            lowest_time_bound <= 0;
+            lowest_time_bound_p1 <= 0;
+            lowest_time_bound_p2 <= 0;
+            lowest_time_bound_p3 <= 0;
         end else if (s_axis_tready) begin
              if(s_axis_tvalid & (s_axis_tkeep != 0)) begin
                   s_axis_tuser_p <= s_axis_tuser;
                   // Rollover occurred
                   if (s_axis_tuser_p > s_axis_tuser) begin
                        rollover_time <= rollover_time + 1;
+                  end
+
+                  lowest_time_bound_p1 <= {rollover_time, s_axis_tuser_p, {12{1'b0}}} * 4000;
+             end
+
+             // Delay to match the processing of the tagtime
+             lowest_time_bound_p2 <= lowest_time_bound_p1;
+             lowest_time_bound_p3 <= lowest_time_bound_p2;
+
+             if (lowest_time_bound_p3 > lowest_time_bound) begin
+                  lowest_time_bound <= lowest_time_bound_p3;
+             end
+             for(int i = 0; i<NUMBER_OF_WORDS; i += 1) begin
+                  if (m_axis_tkeep[i]) begin
+                       // The tagtime is always equal or higher than lowest_time_bound_p3 and lowest_time_bound
+                       // as it's sorted
+                       lowest_time_bound <= m_axis_tagtime[i];
                   end
              end
         end
