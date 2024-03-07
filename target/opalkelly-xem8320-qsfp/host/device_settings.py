@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # XEM8320 Time Tagger FPGALink Reference Design Configuration Tool.
-# 
+#
 # This file is part of the Time Tagger software defined digital data
 # acquisition FPGA-link reference design.
 #
@@ -18,6 +18,7 @@
 
 import argparse
 import ok
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -98,6 +99,7 @@ def main():
         settings.SetInt("XEM8320_VIO2_VOLTAGE", 330)
         settings.Save()
         print("Saved settings.")
+
 
 if __name__ == "__main__":
     main()

@@ -15,12 +15,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-`resetall
-`timescale 1ns / 1ps
-`default_nettype none
+// verilog_format: off
+ `resetall
+ `timescale 1ns / 1ps
+ `default_nettype none
+// verilog_format: on
 
 
-module histogram  #(
+module histogram #(
     parameter TAG_WIDTH = 64,
     parameter SHIFT_WIDTH = $clog2(TAG_WIDTH),
     parameter NUM_OF_TAGS = 4,
@@ -30,9 +32,8 @@ module histogram  #(
     parameter HIST_MEM_DEPTH = 4096,
     parameter HIST_WORD_SIZE = 32,
     parameter HIST_MEM_ADDR_WIDTH = $clog2(HIST_MEM_DEPTH),
-    parameter ENABLE_INPUT_REGISTERS= 1
-)
-(
+    parameter ENABLE_INPUT_REGISTERS = 1
+) (
     // All inputs and outputs are synchronized into clk.
     input wire clk,
     input wire rst,
@@ -75,20 +76,24 @@ module histogram  #(
     output reg last_sample_out,
     // read latency is 6 clock cycles.
     input wire read_en
-    );
+);
 
     //------------------------------------------------------------------//
     // setting the configurations
 
     // defining all the possible states
-    enum logic[1 : 0]{INITIAL_CONFIG, DATA_GATHERING, MEM_READ} state = INITIAL_CONFIG;
+    enum logic [1 : 0] {
+        INITIAL_CONFIG,
+        DATA_GATHERING,
+        MEM_READ
+    } state = INITIAL_CONFIG;
 
     // register config_en to detect when it is asserted
     logic r1config_en;
 
     // registers for capturing the config. data
     logic [CHANNEL_WIDTH - 1 : 0] click_channel_reg, start_channel_reg;
-    logic [SHIFT_WIDTH - 1 : 0]   shift_val_reg;
+    logic [SHIFT_WIDTH - 1 : 0] shift_val_reg;
 
     // register hist_read_start to detect when it is asserted
     logic r1hist_read_start;
@@ -166,7 +171,7 @@ module histogram  #(
         end
 
         if (rst) begin
-            state <= INITIAL_CONFIG;
+            state  <= INITIAL_CONFIG;
             toggle <= 0;
         end
 
@@ -191,11 +196,11 @@ module histogram  #(
     logic reset_mem, read_mem;
     always_ff @(posedge clk) begin
         reset_buf <= {reset_buf[6 : 0], hist_reset_reg};
-        read_buf <= {read_buf[6 : 0], hist_read_start_reg};
+        read_buf  <= {read_buf[6 : 0], hist_read_start_reg};
     end
     // these signals are used for resetting and reading the memory
-    assign reset_mem = (state == MEM_READ) ? reset_buf[DELAY_SIZE - 1] : 0;
-    assign read_mem = (state == MEM_READ) ? read_buf[DELAY_SIZE - 1] : 0;
+    assign reset_mem = (state == MEM_READ) ? reset_buf[DELAY_SIZE-1] : 0;
+    assign read_mem  = (state == MEM_READ) ? read_buf[DELAY_SIZE-1] : 0;
 
     //------------------------------------------------------------------//
     // detecting the start and click channels' data and computing
@@ -225,14 +230,14 @@ module histogram  #(
     generate
         if (ENABLE_INPUT_REGISTERS == 1) begin
             always_ff @(posedge clk) begin
-                r1tagtime <= tagtime;
-                r1channel <= channel;
+                r1tagtime   <= tagtime;
+                r1channel   <= channel;
                 r1valid_tag <= valid_tag;
                 r1inp_ready <= inp_ready;
             end
         end else begin
-            assign r1tagtime = tagtime;
-            assign r1channel = channel;
+            assign r1tagtime   = tagtime;
+            assign r1channel   = channel;
             assign r1valid_tag = valid_tag;
             assign r1inp_ready = inp_ready;
         end
@@ -255,14 +260,14 @@ module histogram  #(
         last_start_data = r1last_start_data;
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
             // detecting the data samples coming from the start channel
-            if((r1channel[i*CHANNEL_WIDTH +:CHANNEL_WIDTH] == start_channel_reg) && r1inp_ready && r1valid_tag[i]) begin
+            if ((r1channel[i*CHANNEL_WIDTH+:CHANNEL_WIDTH] == start_channel_reg) && r1inp_ready && r1valid_tag[i]) begin
                 detected_start_data = 1;
-                last_start_data = r1tagtime[i*TAG_WIDTH +: TAG_WIDTH];
+                last_start_data = r1tagtime[i*TAG_WIDTH+:TAG_WIDTH];
             end
             // detecting the data samples coming from the click channel
             if((r1channel[i*CHANNEL_WIDTH +:CHANNEL_WIDTH] == click_channel_reg)
              && r1inp_ready && r1valid_tag[i] && detected_start_data) begin
-                r0diff_value[i*TAG_WIDTH +: TAG_WIDTH] = r1tagtime[i*TAG_WIDTH +: TAG_WIDTH] - last_start_data;
+                r0diff_value[i*TAG_WIDTH+:TAG_WIDTH] = r1tagtime[i*TAG_WIDTH+:TAG_WIDTH] - last_start_data;
                 r0diff_value_valid[i] = 1;
             end
         end
@@ -292,12 +297,12 @@ module histogram  #(
 
     genvar i, j;
     generate
-        for (i=0; i < NUM_OF_TAGS; i++) begin
+        for (i = 0; i < NUM_OF_TAGS; i++) begin
             always_ff @(posedge clk) begin
                 bs_valid_out[i] <= diff_value_valid[i];
-                bs_data_out[i*TAG_WIDTH +: TAG_WIDTH] <= 'X;
-                if(diff_value_valid[i]) begin
-                    bs_data_out[i*TAG_WIDTH +: TAG_WIDTH] <= diff_value[i*TAG_WIDTH +: TAG_WIDTH] >> shift_val_reg;
+                bs_data_out[i*TAG_WIDTH+:TAG_WIDTH] <= 'X;
+                if (diff_value_valid[i]) begin
+                    bs_data_out[i*TAG_WIDTH+:TAG_WIDTH] <= diff_value[i*TAG_WIDTH+:TAG_WIDTH] >> shift_val_reg;
                 end
             end
         end
@@ -319,25 +324,25 @@ module histogram  #(
     logic mem_read_en;
     logic r1rst;
     always_ff @(posedge clk) begin
-        mem_read_en <= 0;
-        mem_read_addr <= cnt_addr[HIST_MEM_ADDR_WIDTH - 1 : 0];
+        mem_read_en   <= 0;
+        mem_read_addr <= cnt_addr[HIST_MEM_ADDR_WIDTH-1 : 0];
         if (state == DATA_GATHERING) begin
             cnt_addr <= 0;
         end else if (read_mem) begin
-            if (read_en && cnt_addr[HIST_MEM_ADDR_WIDTH]==0) begin
+            if (read_en && cnt_addr[HIST_MEM_ADDR_WIDTH] == 0) begin
                 mem_read_en <= 1;
                 cnt_addr <= cnt_addr + 1;
             end
         end
 
         r1rst <= rst;
-        if (rst^r1rst) begin
+        if (rst ^ r1rst) begin
             cnt_addr <= 0;
         end else if (rst) begin
             // generating address for reading out the BRAMs and resetting them
             mem_read_en <= 1;
             cnt_addr <= cnt_addr + 1;
-            if (cnt_addr > HIST_MEM_DEPTH-1) begin
+            if (cnt_addr > HIST_MEM_DEPTH - 1) begin
                 mem_read_en <= 0;
             end
         end
@@ -360,7 +365,7 @@ module histogram  #(
                 // Generating the proper address for each hist_1lane
                 // module in DATA_GATHERING state
                 logic [TAG_WIDTH - 1 : 0] wide_address;
-                assign wide_address   = mem_active[j] ? 'X : bs_data_out[i*TAG_WIDTH +: TAG_WIDTH];
+                assign wide_address = mem_active[j] ? 'X : bs_data_out[i*TAG_WIDTH+:TAG_WIDTH];
                 logic [HIST_MEM_ADDR_WIDTH - 1 : 0] address_in;
                 logic address_valid_in;
                 always_ff @(posedge clk) begin
@@ -372,29 +377,28 @@ module histogram  #(
                         address_valid_in <= mem_read_en;
                     end else if (!mem_active[j] && !hist_reset_reg) begin
                         // address assignment in DATA_GATHERING state
-                        address_in <= wide_address[HIST_MEM_ADDR_WIDTH - 1 : 0];
-                        if (wide_address[TAG_WIDTH - 1 : HIST_MEM_ADDR_WIDTH] != 0) begin
+                        address_in <= wide_address[HIST_MEM_ADDR_WIDTH-1 : 0];
+                        if (wide_address[TAG_WIDTH-1 : HIST_MEM_ADDR_WIDTH] != 0) begin
                             address_in <= '1;
                         end
                         address_valid_in <= bs_valid_out[i];
                     end
                 end
 
-                Hist_1lane # (
-                .HIST_MEM_DEPTH(HIST_MEM_DEPTH),
-                .HIST_WORD_SIZE(HIST_WORD_SIZE),
-                .HIST_MEM_ADDR_WIDTH(HIST_MEM_ADDR_WIDTH)
-                )
-                Hist_1lane_inst (
-                .clk(clk),
-                .address_in(address_in),
-                .valid_in(address_valid_in),
-                // if rst is one, start reading out and resetting all memories.
-                .hist_rst((read_mem  && mem_active[j]) | rst), // reset the memory during reading it
-                .hist_read((read_mem  && mem_active[j]) | rst),
-                .data_out(hist_dout[j][i*HIST_WORD_SIZE +: HIST_WORD_SIZE]),
-                .valid_out(hist_valid_out[j][i]),
-                .last_sample(last_sample[j][i])
+                Hist_1lane #(
+                    .HIST_MEM_DEPTH(HIST_MEM_DEPTH),
+                    .HIST_WORD_SIZE(HIST_WORD_SIZE),
+                    .HIST_MEM_ADDR_WIDTH(HIST_MEM_ADDR_WIDTH)
+                ) Hist_1lane_inst (
+                    .clk(clk),
+                    .address_in(address_in),
+                    .valid_in(address_valid_in),
+                    // if rst is one, start reading out and resetting all memories.
+                    .hist_rst((read_mem && mem_active[j]) | rst),  // reset the memory during reading it
+                    .hist_read((read_mem && mem_active[j]) | rst),
+                    .data_out(hist_dout[j][i*HIST_WORD_SIZE+:HIST_WORD_SIZE]),
+                    .valid_out(hist_valid_out[j][i]),
+                    .last_sample(last_sample[j][i])
                 );
             end
         end
@@ -415,18 +419,18 @@ module histogram  #(
         read_completed <= r1last_sample;
         last_sample_out <= r1last_sample;
         data_out <= 'X;
-        if(r1hist_valid_out) begin
+        if (r1hist_valid_out) begin
             data_out <= sum;
         end
     end
     always_comb begin
-        sum = r1hist_dout[0 +: HIST_WORD_SIZE];
-        for (int i = 1; i <  NUM_OF_TAGS; i++) begin
-            sum = sum + r1hist_dout[i*HIST_WORD_SIZE +: HIST_WORD_SIZE];
+        sum = r1hist_dout[0+:HIST_WORD_SIZE];
+        for (int i = 1; i < NUM_OF_TAGS; i++) begin
+            sum = sum + r1hist_dout[i*HIST_WORD_SIZE+:HIST_WORD_SIZE];
         end
     end
 
 
-//------------------------------------------------------------------//
+    //------------------------------------------------------------------//
 
 endmodule

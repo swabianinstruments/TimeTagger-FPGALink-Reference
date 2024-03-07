@@ -1,5 +1,5 @@
 # Matrix-based CRC calculation & Verilog output utility
-# 
+#
 # This file is part of the Time Tagger software defined digital data
 # acquisition FPGA-link reference design.
 #
@@ -22,14 +22,17 @@ import numpy as np
 from galois import GF2
 from bitarray import bitarray
 
+
 def intToBitvec(v, width):
     return GF2(np.array([int(i) for i in list(np.binary_repr(v, width=width))]))
+
 
 def bitvecToInt(bv):
     val = 0
     for i, v in enumerate(np.flip(bv)):
         val |= int(v) << i
     return val
+
 
 def rightShiftMat(pl):
     # Create a matrix shifiting the input to the right, simulating the
@@ -39,6 +42,7 @@ def rightShiftMat(pl):
     rightShiftMat[0] = np.identity(pl, dtype=np.uint8)[-1]
 
     return rightShiftMat
+
 
 def zeroMat(poly):
     # Length of polynom required lots of times throughout this code.
@@ -50,6 +54,7 @@ def zeroMat(poly):
 
     return polyMat
 
+
 def bitMat(poly):
     zm = zeroMat(poly)
     (zmr, zmc) = zm.shape
@@ -57,6 +62,7 @@ def bitMat(poly):
     m[:, :-1] = zm
     m[:, -1] = np.flip(GF2(poly))
     return m
+
 
 def binMat(poly, bits):
     pl = len(poly)
@@ -69,13 +75,15 @@ def binMat(poly, bits):
     m[:, :pl] = currentH
     return m
 
+
 def bitwiseCRC(poly, state, input):
     pl = len(poly)
     stateIn = GF2(np.zeros(pl + len(input), dtype=np.uint8))
     stateIn[:pl] = state
     stateIn[pl:] = input
-    #return np.dot(binMat(poly, len(input)), stateIn)
+    # return np.dot(binMat(poly, len(input)), stateIn)
     return np.dot(GF2(H_large), stateIn)
+
 
 def calculateCRC(poly, initialState, inputs, bitwise=False, finalize=True):
     pl = len(poly)
@@ -98,6 +106,7 @@ def calculateCRC(poly, initialState, inputs, bitwise=False, finalize=True):
         state = state + GF2(np.array([1 for _ in range(pl)]))
 
     return state
+
 
 def verilogCRC(moduleName, crcMat):
     state_bit = crcMat.shape[0]
@@ -148,6 +157,7 @@ def verilogCRC(moduleName, crcMat):
         `resetall
         '''
     ).strip()
+
 
 def main():
     def auto_int(x):

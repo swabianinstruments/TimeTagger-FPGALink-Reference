@@ -17,44 +17,46 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-`timescale 1ns / 1ps
-`default_nettype none
+// verilog_format: off
+ `resetall
+ `timescale 1ns / 1ps
+ `default_nettype none
+// verilog_format: on
 
-module sfpp1_eth_10g_axis
-(
+module sfpp1_eth_10g_axis (
     // Freerunning clock input
-    input wire         freerun_clk,
-    input wire         freerun_rst,
+    input wire freerun_clk,
+    input wire freerun_rst,
 
     // Transceiver reference clock
-    input wire         mgtrefclk,
+    input wire mgtrefclk,
 
     // External PLL lock indication
-    input wire         pll_lock,
+    input wire pll_lock,
 
     // SPF+ interface
-    input wire         sfpp_rx_p,
-    input wire         sfpp_rx_n,
-    output wire        sfpp_tx_p,
-    output wire        sfpp_tx_n,
+    input  wire sfpp_rx_p,
+    input  wire sfpp_rx_n,
+    output wire sfpp_tx_p,
+    output wire sfpp_tx_n,
 
     // AXI4-Stream output (without preamble & FCS)
     output wire        axis_rx_clk,
     output wire        axis_rx_rst,
-    input wire         axis_rx_tready,
+    input  wire        axis_rx_tready,
     output wire        axis_rx_tvalid,
     output wire [63:0] axis_rx_tdata,
     output wire        axis_rx_tlast,
-    output wire [7:0]  axis_rx_tkeep,
+    output wire [ 7:0] axis_rx_tkeep,
 
     // AXI4-Stream input (without preamble & FCS, IFG maintained internally)
     output wire        axis_tx_clk,
     output wire        axis_tx_rst,
     output wire        axis_tx_tready,
-    input wire         axis_tx_tvalid,
-    input wire [63:0]  axis_tx_tdata,
-    input wire         axis_tx_tlast,
-    input wire [7:0]   axis_tx_tkeep,
+    input  wire        axis_tx_tvalid,
+    input  wire [63:0] axis_tx_tdata,
+    input  wire        axis_tx_tlast,
+    input  wire [ 7:0] axis_tx_tkeep,
 
     // Wishbone interface for control & status
     wb_interface.slave wb
@@ -71,7 +73,7 @@ module sfpp1_eth_10g_axis
     // - 03h: Reset RX Datapath
     // - 04h: Reset TX Userclk
     // - 05h: Reset RX Userclk
-    reg [5:0]          transceiver_control;
+    reg  [ 5:0] transceiver_control;
 
     // STATUS:
     // - 00h: Transceiver Power Good
@@ -88,55 +90,56 @@ module sfpp1_eth_10g_axis
     // - 0Ah: External PLL Lock Indication
     // - 0Bh: Transceiver QPLL Lock Indication
     // - 0Ch: Transceiver RX CDR Stable Indication
-    wire [12:0]        transceiver_status;
+    wire [12:0] transceiver_status;
 
 
     // Synthesize a freerun clk rst, also respecting the lock status of the
     // external PLL and the Transceiver Enable switch.
-    wire               transceiver_hold_reset;
-    wire               freerun_lock_rst;
-    sync_reset #(.N(4))
-    sfpp_gt_freerun_clk_lock_enable_sync (
+    wire        transceiver_hold_reset;
+    wire        freerun_lock_rst;
+    sync_reset #(
+        .N(4)
+    ) sfpp_gt_freerun_clk_lock_enable_sync (
         .clk(freerun_clk),
         .rst(freerun_rst | !pll_lock | transceiver_hold_reset),
-        .out(freerun_lock_rst));
+        .out(freerun_lock_rst)
+    );
 
     // Misc transceiver control signals
-    wire               gt_tx_reset_pll_datapath;
-    wire               gt_rx_reset_pll_datapath;
-    wire               gt_rx_reset_datapath;
-    wire               gt_userclk_tx_reset;
-    wire               gt_userclk_rx_reset;
+    wire        gt_tx_reset_pll_datapath;
+    wire        gt_rx_reset_pll_datapath;
+    wire        gt_rx_reset_datapath;
+    wire        gt_userclk_tx_reset;
+    wire        gt_userclk_rx_reset;
 
 
     // Misc transceiver status signals
-    wire               gt_powergood;
-    wire               gt_qpll0_lock;
-    wire               gt_tx_pma_reset_done;
-    wire               gt_tx_prgdiv_reset_done;
-    wire               gt_tx_reset_done;
-    wire               gt_rx_pma_reset_done;
-    wire               gt_rx_prgdiv_reset_done;
-    wire               gt_rx_reset_done;
-    wire               gt_userclk_tx_active;
-    wire               gt_userclk_rx_active;
-    wire               gt_rx_cdr_stable;
+    wire        gt_powergood;
+    wire        gt_qpll0_lock;
+    wire        gt_tx_pma_reset_done;
+    wire        gt_tx_prgdiv_reset_done;
+    wire        gt_tx_reset_done;
+    wire        gt_rx_pma_reset_done;
+    wire        gt_rx_prgdiv_reset_done;
+    wire        gt_rx_reset_done;
+    wire        gt_userclk_tx_active;
+    wire        gt_userclk_rx_active;
+    wire        gt_rx_cdr_stable;
 
     // Transceiver TX interface
-    wire               gt_tx_usrclk2;
-    wire [63:0]        gt_tx_data;
-    wire [5:0]         gt_tx_header;
+    wire        gt_tx_usrclk2;
+    wire [63:0] gt_tx_data;
+    wire [ 5:0] gt_tx_header;
 
     // Transceiver RX interface
-    wire               gt_rx_usrclk2;
-    wire               gt_rx_gearboxslip;
-    wire [1:0]         gt_rx_datavalid;
-    wire [63:0]        gt_rx_data;
-    wire [1:0]         gt_rx_headervalid;
-    wire [5:0]         gt_rx_header;
+    wire        gt_rx_usrclk2;
+    wire        gt_rx_gearboxslip;
+    wire [ 1:0] gt_rx_datavalid;
+    wire [63:0] gt_rx_data;
+    wire [ 1:0] gt_rx_headervalid;
+    wire [ 5:0] gt_rx_header;
 
-    sfpp1_eth_10g_gth
-    sfpp1_eth_10g_gth_inst (
+    sfpp1_eth_10g_gth sfpp1_eth_10g_gth_inst (
         // ----- Free-running clock & reset for reset logic -----
         .gtwiz_reset_clk_freerun_in(freerun_clk),
         .gtwiz_reset_all_in(freerun_lock_rst),
@@ -168,10 +171,10 @@ module sfpp1_eth_10g_axis
         .gtwiz_userclk_tx_reset_in(gt_userclk_tx_reset),
 
         // Transmit clocking
-        .gtwiz_userclk_tx_srcclk_out(),
-        .gtwiz_userclk_tx_usrclk_out(),
+        .gtwiz_userclk_tx_srcclk_out (),
+        .gtwiz_userclk_tx_usrclk_out (),
         .gtwiz_userclk_tx_usrclk2_out(gt_tx_usrclk2),
-        .gtwiz_userclk_tx_active_out(gt_userclk_tx_active),
+        .gtwiz_userclk_tx_active_out (gt_userclk_tx_active),
 
         // Transmit data
         .gtwiz_userdata_tx_in(gt_tx_data),
@@ -188,10 +191,10 @@ module sfpp1_eth_10g_axis
         .gtwiz_userclk_rx_reset_in(gt_userclk_rx_reset),
 
         // Receive clocking
-        .gtwiz_userclk_rx_srcclk_out(),
-        .gtwiz_userclk_rx_usrclk_out(),
+        .gtwiz_userclk_rx_srcclk_out (),
+        .gtwiz_userclk_rx_usrclk_out (),
         .gtwiz_userclk_rx_usrclk2_out(gt_rx_usrclk2),
-        .gtwiz_userclk_rx_active_out(gt_userclk_rx_active),
+        .gtwiz_userclk_rx_active_out (gt_userclk_rx_active),
 
 
         .rxgearboxslip_in(gt_rx_gearboxslip),
@@ -199,18 +202,20 @@ module sfpp1_eth_10g_axis
         .gtwiz_userdata_rx_out(gt_rx_data),
         .rxheadervalid_out(gt_rx_headervalid),
         .rxheader_out(gt_rx_header),
-        .rxstartofseq_out());
+        .rxstartofseq_out()
+    );
 
     // Control signal assignments
 
     xpm_cdc_single #(
         .DEST_SYNC_FF(4),
-        .INIT_SYNC_FF(0))
-    sys_clk_rst_cdc (
+        .INIT_SYNC_FF(0)
+    ) sys_clk_rst_cdc (
         .dest_out(transceiver_hold_reset),
-        .dest_clk(freerun_clk), // okClk
-        .src_clk(wb.clk), // sys_clk
-        .src_in(transceiver_control[0]));
+        .dest_clk(freerun_clk),  // okClk
+        .src_clk(wb.clk),  // sys_clk
+        .src_in(transceiver_control[0])
+    );
 
     assign gt_tx_reset_pll_datapath = transceiver_control[1];
     assign gt_rx_reset_pll_datapath = transceiver_control[2];
@@ -238,42 +243,45 @@ module sfpp1_eth_10g_axis
     // PHY status signals:
     // - 00h: RX Block Lock
     // - 01h: RX High BER
-    wire [15:0]        phy_status;
+    wire [15:0] phy_status;
 
     // PHY control signals:
     // - 00h: XGMII loopback mode
-    reg [0:0]          phy_control;
-    reg [0:0]          phy_control_tx_clk;
+    reg  [ 0:0] phy_control;
+    reg  [ 0:0] phy_control_tx_clk;
 
     // XGMII interface
-    wire               xgmii_tx_clk, xgmii_tx_rst;
-    wire               xgmii_rx_clk, xgmii_rx_rst;
-    wire [63:0]        xgmii_tx_data, xgmii_tx_data_int;
-    wire [7:0]         xgmii_tx_ctrl, xgmii_tx_ctrl_int;
-    wire [63:0]        xgmii_rx_data;
-    wire [7:0]         xgmii_rx_ctrl;
+    wire xgmii_tx_clk, xgmii_tx_rst;
+    wire xgmii_rx_clk, xgmii_rx_rst;
+    wire [63:0] xgmii_tx_data, xgmii_tx_data_int;
+    wire [7:0] xgmii_tx_ctrl, xgmii_tx_ctrl_int;
+    wire [63:0] xgmii_rx_data;
+    wire [ 7:0] xgmii_rx_ctrl;
 
     // Clock & reset
     assign xgmii_tx_clk = gt_tx_usrclk2;
     assign xgmii_rx_clk = gt_rx_usrclk2;
 
     sync_reset #(.N(4))
-    sfpp_xgmii_tx_sync_reset (
-        .clk(xgmii_tx_clk),
-        .rst(!gt_tx_reset_done),
-        .out(xgmii_tx_rst)),
-    sfpp_xgmii_rx_sync_reset (
-        .clk(xgmii_rx_clk),
-        .rst(!gt_rx_reset_done),
-        .out(xgmii_rx_rst));
+        sfpp_xgmii_tx_sync_reset (
+            .clk(xgmii_tx_clk),
+            .rst(!gt_tx_reset_done),
+            .out(xgmii_tx_rst)
+        ),
+        sfpp_xgmii_rx_sync_reset (
+            .clk(xgmii_rx_clk),
+            .rst(!gt_rx_reset_done),
+            .out(xgmii_rx_rst)
+        );
 
     // verilog-ethernet PHY instantiation
 
-    wire               rx_block_lock;
-    wire               rx_high_ber;
+    wire rx_block_lock;
+    wire rx_high_ber;
 
-    eth_phy_10g #(.BIT_REVERSE(1))
-    sfpp_eth_10g_phy_inst  (
+    eth_phy_10g #(
+        .BIT_REVERSE(1)
+    ) sfpp_eth_10g_phy_inst (
         .tx_clk(xgmii_tx_clk),
         .tx_rst(xgmii_tx_rst),
         .rx_clk(xgmii_rx_clk),
@@ -295,7 +303,8 @@ module sfpp1_eth_10g_axis
         .rx_bad_block(),
         .rx_sequence_error(),
         .rx_block_lock(rx_block_lock),
-        .rx_high_ber(rx_high_ber));
+        .rx_high_ber(rx_high_ber)
+    );
 
     // To avoid unconnected pin critical warning:
     assign gt_tx_header[5:2] = 4'b0000;
@@ -316,8 +325,8 @@ module sfpp1_eth_10g_axis
     assign axis_tx_rst = xgmii_tx_rst;
 
     xgmii_axis_bridge #(
-        .DATA_WIDTH(64))
-    sfpp_eth_10g_xgmii_axis_bridge (
+        .DATA_WIDTH(64)
+    ) sfpp_eth_10g_xgmii_axis_bridge (
         // Clocking & reset
         .rx_clk(xgmii_rx_clk),
         .rx_rst(xgmii_rx_rst),
@@ -335,21 +344,22 @@ module sfpp1_eth_10g_axis
         // AXI4-Stream interface
         .axis_rx_tready(axis_rx_tready),
         .axis_rx_tvalid(axis_rx_tvalid),
-        .axis_rx_tdata(axis_rx_tdata),
-        .axis_rx_tlast(axis_rx_tlast),
-        .axis_rx_tkeep(axis_rx_tkeep),
+        .axis_rx_tdata (axis_rx_tdata),
+        .axis_rx_tlast (axis_rx_tlast),
+        .axis_rx_tkeep (axis_rx_tkeep),
 
         .axis_tx_tready(axis_tx_tready),
         .axis_tx_tvalid(axis_tx_tvalid),
-        .axis_tx_tdata(axis_tx_tdata),
-        .axis_tx_tlast(axis_tx_tlast),
-        .axis_tx_tkeep(axis_tx_tkeep),
+        .axis_tx_tdata (axis_tx_tdata),
+        .axis_tx_tlast (axis_tx_tlast),
+        .axis_tx_tkeep (axis_tx_tkeep),
 
         // Error / status signals
         .rx_error_ready(),
         .rx_error_preamble(),
         .rx_error_xgmii(),
-        .tx_error_tlast_tkeep());
+        .tx_error_tlast_tkeep()
+    );
 
     // ---------- WISHBONE STATUS & CONTROL LOGIC ----------
 
@@ -357,7 +367,7 @@ module sfpp1_eth_10g_axis
     // necessarily synchronized to the wb.clk. Thus perform an unregistered clock
     // domain crossing of the signals.
     wire [$bits(transceiver_status)-1:0] transceiver_status_wbclk;
-    wire [$bits(phy_status)-1:0]         phy_status_wbclk;
+    wire [        $bits(phy_status)-1:0] phy_status_wbclk;
 
     xpm_cdc_array_single #(
         .DEST_SYNC_FF(4),
@@ -365,12 +375,13 @@ module sfpp1_eth_10g_axis
         .SIM_ASSERT_CHK(0),
         // Do not register inputs (required for asynchronous signals)
         .SRC_INPUT_REG(0),
-        .WIDTH($bits({phy_status, transceiver_status})))
-    sfpp_eth_10g_status_cdc (
+        .WIDTH($bits({phy_status, transceiver_status}))
+    ) sfpp_eth_10g_status_cdc (
         .dest_out({phy_status_wbclk, transceiver_status_wbclk}),
         .dest_clk(wb.clk),
-        .src_clk(), // Inputs are not registered
-        .src_in({phy_status, transceiver_status}));
+        .src_clk(),  // Inputs are not registered
+        .src_in({phy_status, transceiver_status})
+    );
 
     xpm_cdc_array_single #(
         .DEST_SYNC_FF(4),
@@ -378,12 +389,13 @@ module sfpp1_eth_10g_axis
         .SIM_ASSERT_CHK(0),
         // Do not register inputs (required for asynchronous signals)
         .SRC_INPUT_REG(0),
-        .WIDTH($bits({phy_control})))
-    sfpp_eth_10g_control_tx_clk_cdc (
+        .WIDTH($bits({phy_control}))
+    ) sfpp_eth_10g_control_tx_clk_cdc (
         .dest_out({phy_control_tx_clk}),
         .dest_clk(xgmii_tx_clk),
-        .src_clk(), // Inputs are not registered
-        .src_in({phy_control}));
+        .src_clk(),  // Inputs are not registered
+        .src_in({phy_control})
+    );
 
 
     always @(posedge wb.clk) begin
@@ -396,19 +408,19 @@ module sfpp1_eth_10g_axis
             if (wb.we) begin
                 // Write
                 casez (wb.adr[7:0])
-                  8'b000010??: transceiver_control <= wb.dat_o;
-                  8'b000100??: phy_control <= wb.dat_o;
+                    8'b000010??: transceiver_control <= wb.dat_o;
+                    8'b000100??: phy_control <= wb.dat_o;
                 endcase
             end else begin
                 // Read
                 casez (wb.adr[7:0])
-                  // Indicate the SFP+ bus slave is present in the design
-                  8'b000000??: wb.dat_o <= 1;
-                  8'b000001??: wb.dat_o <= transceiver_status_wbclk;
-                  8'b000010??: wb.dat_o <= transceiver_control;
-                  8'b000011??: wb.dat_o <= phy_status_wbclk;
-                  8'b000100??: wb.dat_o <= phy_control;
-                  default: wb.dat_o <= 32'h00000000;
+                    // Indicate the SFP+ bus slave is present in the design
+                    8'b000000??: wb.dat_o <= 1;
+                    8'b000001??: wb.dat_o <= transceiver_status_wbclk;
+                    8'b000010??: wb.dat_o <= transceiver_control;
+                    8'b000011??: wb.dat_o <= phy_status_wbclk;
+                    8'b000100??: wb.dat_o <= phy_control;
+                    default: wb.dat_o <= 32'h00000000;
                 endcase
             end
         end else begin
@@ -417,5 +429,3 @@ module sfpp1_eth_10g_axis
     end
 
 endmodule
-
-`resetall

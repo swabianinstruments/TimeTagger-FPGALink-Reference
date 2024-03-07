@@ -10,13 +10,15 @@
  * - 2023-2024 Ehsan Jokar <ehsan@swabianinstruments.com>
  */
 
+// verilog_format: off
  `resetall
  `timescale 1ns / 1ps
  `default_nettype none
+// verilog_format: on
 
 
 module countrate #(
-    parameter TAG_WIDTH =  64,
+    parameter TAG_WIDTH = 64,
     parameter NUM_OF_TAGS = 4,
     parameter TOT_TAGS_WIDTH = NUM_OF_TAGS * TAG_WIDTH,
     parameter CHANNEL_WIDTH = 6,
@@ -26,8 +28,7 @@ module countrate #(
     parameter COUNTER_WIDTH = 32,
     parameter INPUT_FIFO_DEPTH = 1024
 
-)
-(
+) (
     /* All inputs and outputs are synchronized into the clk. if some controlling
     signals are generated in different clock domains, cdc should be used
     for synchronization outside of this module.
@@ -61,7 +62,7 @@ module countrate #(
     input wire reset_counting,
 
     //Each lane represents the count of detected tags in its respective channel.
-    output wire [COUNTER_WIDTH - 1 : 0] count_data [NUM_OF_CHANNELS],
+    output wire [COUNTER_WIDTH - 1 : 0] count_data[NUM_OF_CHANNELS],
 
     /* The countrate_wrapper module is tasked with receiving data when
     count_valid is asserted. Within the countrate_wrapper module, it is
@@ -72,7 +73,7 @@ module countrate #(
     them whenever it wants.
     */
     output wire count_valid
-    );
+);
 
     //------------------------------------------------------------------//
     // Input FIFOs
@@ -106,28 +107,27 @@ module countrate #(
     logic [TOT_TAGS_WIDTH - 1 : 0] tagtime_o;
     logic [TOT_CHANNELS_WIDTH - 1 : 0] channel_o;
 
-   xpm_fifo_sync #(
-       .FIFO_MEMORY_TYPE("auto"),
-       .FIFO_READ_LATENCY(2),
-       .FIFO_WRITE_DEPTH(INPUT_FIFO_DEPTH),
-       .READ_DATA_WIDTH(NUM_OF_TAGS + TOT_TAGS_WIDTH + TOT_CHANNELS_WIDTH),
-       .READ_MODE("fwft"),
-       .USE_ADV_FEATURES("1707"),
-       .WRITE_DATA_WIDTH(NUM_OF_TAGS + TOT_TAGS_WIDTH + TOT_CHANNELS_WIDTH)
-    )
-    valid_fifo_inst (
-       .dout({valid_tag_o, tagtime_o, channel_o}),
-       .empty(fifo_empty),
-       .din({r1valid_tag, r1tagtime, r1channel}),
-       .rd_en(inp_fifo_rd_en),
-       .rst(rst),
-       .wr_clk(clk),
-       .wr_en(valid_tag_or)
+    xpm_fifo_sync #(
+        .FIFO_MEMORY_TYPE("auto"),
+        .FIFO_READ_LATENCY(2),
+        .FIFO_WRITE_DEPTH(INPUT_FIFO_DEPTH),
+        .READ_DATA_WIDTH(NUM_OF_TAGS + TOT_TAGS_WIDTH + TOT_CHANNELS_WIDTH),
+        .READ_MODE("fwft"),
+        .USE_ADV_FEATURES("1707"),
+        .WRITE_DATA_WIDTH(NUM_OF_TAGS + TOT_TAGS_WIDTH + TOT_CHANNELS_WIDTH)
+    ) valid_fifo_inst (
+        .dout({valid_tag_o, tagtime_o, channel_o}),
+        .empty(fifo_empty),
+        .din({r1valid_tag, r1tagtime, r1channel}),
+        .rd_en(inp_fifo_rd_en),
+        .rst(rst),
+        .wr_clk(clk),
+        .wr_en(valid_tag_or)
     );
 
     //------------------------------------------------------------------//
     // unpacking the FIFO's outputs
-    typedef struct{
+    typedef struct {
         logic valid[NUM_OF_TAGS];
         logic [TAG_WIDTH - 1 : 0] time_tag[NUM_OF_TAGS];
         logic [CHANNEL_WIDTH - 1 : 0] channel[NUM_OF_TAGS];
@@ -138,8 +138,8 @@ module countrate #(
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
             if (fifo_data_valid) begin
                 data.valid[i] <= valid_tag_o[i];
-                data.time_tag[i] <= tagtime_o[i*TAG_WIDTH +: TAG_WIDTH];
-                data.channel[i] <= channel_o[i*CHANNEL_WIDTH +:CHANNEL_WIDTH];
+                data.time_tag[i] <= tagtime_o[i*TAG_WIDTH+:TAG_WIDTH];
+                data.channel[i] <= channel_o[i*CHANNEL_WIDTH+:CHANNEL_WIDTH];
             end
 
         end
@@ -183,7 +183,7 @@ module countrate #(
         // initializing the first window
         if (!start_measurement) begin
             for (int i = NUM_OF_TAGS - 1; i >= 0; i--) begin
-                if(data.valid[i] && fifo_data_valid && start_counting_hold) begin
+                if (data.valid[i] && fifo_data_valid && start_counting_hold) begin
                     window_start <= data.time_tag[i];
                     window_end <= data.time_tag[i] + r1window_size;
                     next_window_end <= data.time_tag[i] + (r1window_size << 1);
@@ -191,8 +191,7 @@ module countrate #(
                     break;
                 end
             end
-        end
-        else if (update_window) begin
+        end else if (update_window) begin
             /* This type of updating the window information allows to dynamically change the window size
             during runtime. */
             window_start <= window_end;
@@ -200,7 +199,7 @@ module countrate #(
             next_window_end <= next_window_end + r1window_size;
         end
 
-        update_window_delays[DELAY_BUFF_SIZE - 1 : 0] <= {update_window_delays[DELAY_BUFF_SIZE - 2 : 0], update_window};
+        update_window_delays[DELAY_BUFF_SIZE-1 : 0] <= {update_window_delays[DELAY_BUFF_SIZE-2 : 0], update_window};
     end
     //------------------------------------------------------------------//
     // calculating the difference between data.time_tag and the end of the current and next windows
@@ -234,7 +233,7 @@ module countrate #(
     always_comb begin
         r0inp_fifo_rd_en = inp_fifo_rd_en;
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
-            if(data.valid[i] && fifo_data_valid && start_measurement) begin
+            if (data.valid[i] && fifo_data_valid && start_measurement) begin
                 // !difference[1][i][TAG_WIDTH-1] is the same as data.time_tag[i] >= next_window_end
                 if (!difference[1][i][TAG_WIDTH-1]) begin
                     r0inp_fifo_rd_en = 0;
@@ -261,12 +260,12 @@ module countrate #(
     period until that particular window becomes the next window for the tag.
     */
     always_comb begin
-        update_window   <= 0;
+        update_window <= 0;
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
             if (data.valid[i] && (fifo_data_valid || extended_valid) && start_measurement) begin
                 // !difference[0][i][TAG_WIDTH-1] is the same as data.time_tag[i] >= window_end
                 if (!difference[0][i][TAG_WIDTH-1]) begin
-                    update_window   <= 1;
+                    update_window <= 1;
                 end
             end
         end
@@ -288,10 +287,10 @@ module countrate #(
     Subsequently, this information is decoded into numerical values by simply adding the number of one
     bits for each channel, which are then incorporated into dedicated counters.
     */
-    logic [NUM_OF_TAGS - 1 : 0] detected_channel[2][NUM_OF_CHANNELS] = '{default:'0};
+    logic [NUM_OF_TAGS - 1 : 0] detected_channel[2][NUM_OF_CHANNELS] = '{default: '0};
 
     always_ff @(posedge clk) begin
-        detected_channel <= '{default:'0};
+        detected_channel <= '{default: '0};
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
             if (data.valid[i] && (fifo_data_valid || extended_valid) && start_measurement) begin
                 // difference[0][i][TAG_WIDTH-1] is the same as data.time_tag[i] < window_end
@@ -301,9 +300,8 @@ module countrate #(
                             detected_channel[0][j][i] <= 1;
                         end
                     end
-                end
-                // difference[1][i][TAG_WIDTH-1] is the same as data.time_tag[i] < next_window_end
-                // !difference[0][i][TAG_WIDTH-1] is the same as data.time_tag[i] >= window_end
+                end  // difference[1][i][TAG_WIDTH-1] is the same as data.time_tag[i] < next_window_end
+                     // !difference[0][i][TAG_WIDTH-1] is the same as data.time_tag[i] >= window_end
                 else if (difference[1][i][TAG_WIDTH-1] && !difference[0][i][TAG_WIDTH-1]) begin
                     for (int j = 0; j < NUM_OF_CHANNELS; j++) begin
                         if (j == data.channel[i]) begin
@@ -323,7 +321,7 @@ module countrate #(
     typedef logic [SUM_WIDTH - 1 : 0] part_sum_type[2][NUM_OF_CHANNELS];
     part_sum_type r0partial_sum, partial_sum;
     always_comb begin
-        r0partial_sum = '{default:'0};
+        r0partial_sum = '{default: '0};
         for (int i = 0; i < NUM_OF_CHANNELS; i++) begin
             for (int j = 0; j < NUM_OF_TAGS; j++) begin
                 r0partial_sum[0][i] = r0partial_sum[0][i] + detected_channel[0][i][j];
@@ -336,10 +334,10 @@ module countrate #(
     // this registers are used to capter the value of the counter by the end of the window
     logic [COUNTER_WIDTH - 1 : 0] counters_reg[NUM_OF_CHANNELS];
     always_ff @(posedge clk) begin
-        partial_sum <= r0partial_sum;
+        partial_sum  <= r0partial_sum;
         // reset the counters for a new measurement
 
-        counters_reg <= '{default:'X};
+        counters_reg <= '{default: 'X};
         if (start_measurement) begin
             for (int i = 0; i < NUM_OF_CHANNELS; i++) begin
                 /*update_window_delays[1] is the delayed update_window signal aligned with partial_sum.
@@ -359,11 +357,11 @@ module countrate #(
         end
 
         if (rst || reset_counting) begin
-            counters <= '{default:'0};
+            counters <= '{default: '0};
         end
     end
 
-    assign count_data = counters_reg;
+    assign count_data  = counters_reg;
     assign count_valid = update_window_delays[2];
 
 endmodule

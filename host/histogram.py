@@ -16,6 +16,7 @@
 from .ok_wishbone import Wishbone
 import numpy as np
 
+
 class Histogram:
     MODULE_REG = 0
     BIN_SIZE_REG = 4
@@ -30,8 +31,8 @@ class Histogram:
 
         module_name = self.wb.read(self.base_address + self.MODULE_REG).to_bytes(4, 'big')
         assert module_name == b'hist', (
-        "Connected to a module other than Histogram. "
-        "Ensure that you have connected the correct Wishbone interface to your Histogram module inside the FPGA project."
+            "Connected to a module other than Histogram. "
+            "Ensure that you have connected the correct Wishbone interface to your Histogram module inside the FPGA project."
         )
 
         self.number_of_bins = self._get_bin_size()
@@ -52,7 +53,6 @@ class Histogram:
         # Storing the result of the previous configuration
         self.prev_data_array = self.data_array
         self.data_array = np.zeros(self.number_of_bins, dtype=np.uint64)
-
 
     def set_config(self, start_channel, click_channel, shift=0):
 
@@ -83,7 +83,13 @@ class Histogram:
                 # Determine the current chunk size
                 chunk_size = min(self.wb.MAX_BURST_SIZE, self.number_of_bins - updated_bins)
                 # Perform burst read for the current chunk
-                rd_data = np.array(self.wb.burst_read(self.base_address + self.READ_DATA_REG, chunk_size, 0), dtype=np.uint32)
+                rd_data = np.array(
+                    self.wb.burst_read(
+                        self.base_address +
+                        self.READ_DATA_REG,
+                        chunk_size,
+                        0),
+                    dtype=np.uint32)
                 self.data_array[updated_bins:updated_bins + chunk_size] += rd_data
 
             if reset:

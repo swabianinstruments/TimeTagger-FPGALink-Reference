@@ -15,17 +15,18 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+// verilog_format: off
  `resetall
  `timescale 1ns / 1ps
  `default_nettype none
+// verilog_format: on
 
 
-module Hist_1lane#(
+module Hist_1lane #(
     parameter HIST_MEM_DEPTH = 4096,
     parameter HIST_WORD_SIZE = 32,
     parameter HIST_MEM_ADDR_WIDTH = $clog2(HIST_MEM_DEPTH)
-)
-(
+) (
     input wire clk,
     input wire [HIST_MEM_ADDR_WIDTH - 1 : 0] address_in,
     input wire valid_in,
@@ -34,7 +35,7 @@ module Hist_1lane#(
     output reg [HIST_WORD_SIZE - 1 : 0] data_out,
     output reg valid_out,
     output reg last_sample
-    );
+);
 
 
     // defining the memory ports
@@ -51,30 +52,29 @@ module Hist_1lane#(
         .BYTE_WRITE_WIDTH_A(HIST_WORD_SIZE),
         .CLOCKING_MODE("common_clock"),
         .MEMORY_OPTIMIZATION("true"),
-        .MEMORY_SIZE(HIST_MEM_DEPTH*HIST_WORD_SIZE),
+        .MEMORY_SIZE(HIST_MEM_DEPTH * HIST_WORD_SIZE),
         .READ_DATA_WIDTH_B(HIST_WORD_SIZE),
-        .READ_LATENCY_B (1),
-        .WRITE_DATA_WIDTH_A (HIST_WORD_SIZE),
+        .READ_LATENCY_B(1),
+        .WRITE_DATA_WIDTH_A(HIST_WORD_SIZE),
         .WRITE_PROTECT(1)
-    )
-    xpm_memory_sdpram_inst (
-        .doutb(doutb), // READ_DATA_WIDTH_B-bit output: Data output for port B read operations.
-        .addra(addra), // ADDR_WIDTH_A-bit input: Address for port A write operations.
-        .addrb(addrb), // ADDR_WIDTH_B-bit input: Address for port B read operations.
-        .clka(clk), // 1-bit input: Clock signal for port A. Also clocks port B when
-                    // parameter CLOCKING_MODE is "common_clock".
+    ) xpm_memory_sdpram_inst (
+        .doutb(doutb),  // READ_DATA_WIDTH_B-bit output: Data output for port B read operations.
+        .addra(addra),  // ADDR_WIDTH_A-bit input: Address for port A write operations.
+        .addrb(addrb),  // ADDR_WIDTH_B-bit input: Address for port B read operations.
+        .clka (clk),    // 1-bit input: Clock signal for port A. Also clocks port B when
+                        // parameter CLOCKING_MODE is "common_clock".
 
-        .dina(dina), // WRITE_DATA_WIDTH_A-bit input: Data input for port A write operations.
-        .ena (ena),  // 1-bit input: Memory enable signal for port A. Must be high on clock
-                     // cycles when write operations are initiated. Pipelined internally.
+        .dina(dina),  // WRITE_DATA_WIDTH_A-bit input: Data input for port A write operations.
+        .ena (ena),   // 1-bit input: Memory enable signal for port A. Must be high on clock
+                      // cycles when write operations are initiated. Pipelined internally.
 
-        .enb (enb), // 1-bit input: Memory enable signal for port B. Must be high on clock
+        .enb(enb),  // 1-bit input: Memory enable signal for port B. Must be high on clock
                     // cycles when read operations are initiated. Pipelined internally.
 
-        .regceb (1), // 1-bit input: Clock Enable for the last register stage on the output
+        .regceb(1),  // 1-bit input: Clock Enable for the last register stage on the output
                      // data path.
-        .wea (wea)
-     );
+        .wea(wea)
+    );
 
     // End of xpm_memory_sdpram_inst instantiation
 
@@ -82,7 +82,7 @@ module Hist_1lane#(
     logic [HIST_MEM_ADDR_WIDTH - 1 : 0] r1address_in;
     logic r1valid_in;
     always_ff @(posedge clk) begin
-        r1valid_in <= valid_in;
+        r1valid_in   <= valid_in;
         r1address_in <= address_in;
     end
 
@@ -94,7 +94,7 @@ module Hist_1lane#(
     // result into the memory. Therefore, we don't read again from the same
     // address. In other words, we don't read from the same address until
     // it's repeated in consecutive clock cycles.
-    assign enb = (r1valid_in && (address_in == r1address_in)) ? 0 : valid_in;
+    assign enb   = (r1valid_in && (address_in == r1address_in)) ? 0 : valid_in;
     // assign addrb  = address_in;
     assign addrb = enb ? address_in : 'X;
 
@@ -106,12 +106,11 @@ module Hist_1lane#(
     // into an address while we receive the same address in consecutive clock cycles.
     // In addition, when the memory is read out, and the hist_rst is not asserted,
     // no data should be written into the memory.
-    assign ena = ((valid_in && (r1address_in == address_in)) ||
-                  (hist_read && !hist_rst))? 0 : r1valid_in;
-    assign wea = ena;
+    assign ena   = ((valid_in && (r1address_in == address_in)) || (hist_read && !hist_rst)) ? 0 : r1valid_in;
+    assign wea   = ena;
 
     // writing data into the memory
-    logic [HIST_WORD_SIZE - 1: 0] counter, counter_reg;
+    logic [HIST_WORD_SIZE - 1:0] counter, counter_reg;
     logic r1enb;
     // registering the value of counter and enb
     always_ff @(posedge clk) begin
@@ -128,11 +127,10 @@ module Hist_1lane#(
 
     // generarting the output
     always_ff @(posedge clk) begin
-        valid_out <= hist_read ? r1enb   : 0;
-        data_out <= (hist_read && r1enb)? doutb : 'X;
+        valid_out <= hist_read ? r1enb : 0;
+        data_out <= (hist_read && r1enb) ? doutb : 'X;
         last_sample <= 0;
-        if(hist_read && r1enb && r1address_in == HIST_MEM_DEPTH - 1)
-            last_sample <= 1;
+        if (hist_read && r1enb && r1address_in == HIST_MEM_DEPTH - 1) last_sample <= 1;
     end
 
 endmodule

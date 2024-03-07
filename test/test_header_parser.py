@@ -35,6 +35,7 @@ from cocotbext.axi import (
 
 import misc
 
+
 @cocotb.test()
 async def header_parser_testbench(dut, packets=[]):
     rng = random.Random(42)

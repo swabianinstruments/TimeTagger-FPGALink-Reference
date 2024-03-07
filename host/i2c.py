@@ -1,5 +1,5 @@
 # I2C Interface Abstraction in Python
-# 
+#
 # This file is part of the Time Tagger software defined digital data
 # acquisition FPGA-link reference design.
 #
@@ -16,9 +16,11 @@
 from abc import ABC, abstractmethod
 from enum import IntEnum
 
+
 class I2CRW(IntEnum):
     WRITE = 0
     READ = 1
+
 
 class I2CInterface(ABC):
     @abstractmethod
@@ -28,7 +30,7 @@ class I2CInterface(ABC):
         assert 0 <= addr <= 127
 
         # Enforce usage of the I2CRW enum
-        assert type(rw) == I2CRW
+        assert isinstance(rw, I2CRW)
 
     @abstractmethod
     def write(self, data):
@@ -41,6 +43,7 @@ class I2CInterface(ABC):
     @abstractmethod
     def stop(self):
         pass
+
 
 class MockI2CSlave(ABC):
     def __init__(self):

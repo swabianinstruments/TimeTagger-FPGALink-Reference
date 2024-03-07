@@ -6,8 +6,8 @@
 # Copyright (C) 2022 Swabian Instruments, All Rights Reserved
 #
 # Authors:
-#- 2023-2024 Markus Wick <markus@swabianinstruments.com>
-#- 2023-2024 Ehsan Jokar <ehsan@swabianinstruments.com>
+# - 2023-2024 Markus Wick <markus@swabianinstruments.com>
+# - 2023-2024 Ehsan Jokar <ehsan@swabianinstruments.com>
 #
 # This file is provided under the terms and conditions of the BSD 3-Clause
 # license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -25,7 +25,7 @@ class Wishbone:
     ADDR_WBBRIDGE_IN: int = 0x83
     ADDR_WBBRIDGE_OUT: int = 0xA4
     # We should support 2048 words, but with prog_full
-    MAX_FIFO_SIZE = (2*1024 - 300) * 4
+    MAX_FIFO_SIZE = (2 * 1024 - 300) * 4
     MAX_BURST_SIZE = 8191
 
     def __init__(self, xem: ok.okCFrontPanel):
@@ -144,13 +144,13 @@ class Wishbone:
             nonlocal data
             res = struct.unpack('<' + 'I' * words, res)
             header2 = res[0]
-            data = res[1:size+1]
+            data = res[1:size + 1]
             addr2 = res[-2]
             time_out = res[-1]
 
             assert header == header2
             assert time_out == 0, f"timeout on burst read from addr {addr2}"
-            assert addr + (size-1) * addr_incr == addr2
+            assert addr + (size - 1) * addr_incr == addr2
 
         self.queue(cmd, words * 4, handle)
 
@@ -175,7 +175,7 @@ class Wishbone:
 
             assert header == header2
             assert time_out == 0, f"timeout on burst writing to addr {addr2}"
-            assert addr + (size-1) * addr_incr == addr2
+            assert addr + (size - 1) * addr_incr == addr2
 
         self.queue(cmd, 16, handle)
 
