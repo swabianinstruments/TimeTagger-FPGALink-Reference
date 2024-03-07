@@ -40,7 +40,7 @@ module countrate #(
     input wire [TOT_TAGS_WIDTH - 1 : 0] tagtime,
     /*There is a possibility to receive a keep alive tag in order to update the
     window information and update the PC or the downstream module with the existence
-    of empty wondows. This will happen if we don't receive any real tag for a long period.
+    of empty windows. This will happen if we don't receive any real tag for a long period.
     To deal with this, the keep alive would be an effective solution. This tag can come with
     a channel number outside of [0 : NUM_OF_CHANNELS) range. */
     input wire [TOT_CHANNELS_WIDTH - 1 : 0] channel,
@@ -331,7 +331,7 @@ module countrate #(
     end
 
     logic [COUNTER_WIDTH - 1 : 0] counters[NUM_OF_CHANNELS];
-    // this registers are used to capter the value of the counter by the end of the window
+    // this registers are used to capture the value of the counter by the end of the window
     logic [COUNTER_WIDTH - 1 : 0] counters_reg[NUM_OF_CHANNELS];
     always_ff @(posedge clk) begin
         partial_sum  <= r0partial_sum;

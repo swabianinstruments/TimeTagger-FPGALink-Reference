@@ -54,7 +54,7 @@ async def data_channel_testbench(dut, packets=[]):
             "tags": [gen_tag(rng.getrandbits(12), rng.getrandbits(12), rng.getrandbits(6)) for i in range((rng.randrange(20) + 1) * 4)],
         } for i in range(20)
     ]
-    # send sucessive packets
+    # send successive packets
     packets = [gen_packet(contents["tags"], sequence, contents["wrap_count"])
                for (sequence, contents) in enumerate(packet_contents)]
 
