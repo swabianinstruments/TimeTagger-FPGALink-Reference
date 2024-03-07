@@ -44,31 +44,27 @@ module si_tag_converter #(
     input  wire [KEEP_WIDTH_IN-1:0] s_axis_tkeep,
     input  wire [           32-1:0] s_axis_tuser,   // Rollover time
 
-    output wire                 m_axis_tvalid,
-    input  wire                 m_axis_tready,
+    output wire                       m_axis_tvalid,
+    input  wire                       m_axis_tready,
     // The time the tag was captured at
     // In 1/3 ps since the startup of the TTX
-    output wire        [64-1:0] m_axis_tagtime[NUMBER_OF_WORDS-1:0],
+    output reg        [64-1:0]       m_axis_tagtime[NUMBER_OF_WORDS-1:0],
     // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
-    output wire signed [   5:0] m_axis_channel[NUMBER_OF_WORDS-1:0],
-
-    output wire [NUMBER_OF_WORDS-1:0] m_axis_tkeep
+    output reg signed [   5:0]       m_axis_channel[NUMBER_OF_WORDS-1:0],
+    output reg [NUMBER_OF_WORDS-1:0] m_axis_tkeep
 );
 
     assign s_axis_tready = m_axis_tready || !m_axis_tvalid;
 
     // Handle rollover of t_axis_tuser, should happen roughly every 6.5 hours
     reg [31:0] rollover_time = 0;
-    reg [31:0] rollover_time_p;
     reg [31:0] s_axis_tuser_p;
 
     always @(posedge clk) begin
         if (rst == 1) begin
             rollover_time <= 0;
-            rollover_time_p <= 0;
-        end else begin
-             rollover_time_p <= rollover_time;
-             if(s_axis_tready & (s_axis_tvalid != 0) & (s_axis_tkeep != 0)) begin
+        end else if (s_axis_tready) begin
+             if(s_axis_tvalid & (s_axis_tkeep != 0)) begin
                   s_axis_tuser_p <= s_axis_tuser;
                   // Rollover occurred
                   if (s_axis_tuser_p > s_axis_tuser) begin
@@ -81,75 +77,38 @@ module si_tag_converter #(
     genvar i;
     generate
         for (i = 0; i < NUMBER_OF_WORDS; i += 1) begin
-            wire valid_tag;
-            wire [63:0] tagtime;
-            wire [1:0] event_type;
-            wire [5:0] channel_number;
-            reg signed [5:0] channel;
-            wire [11:0] subtime;
-            wire [11:0] counter;
+            reg [1:0] event_type;
+            reg [5:0] channel_number;
+            reg [11:0] subtime;
             reg [63:0] tagtime_p;
-            reg [63:0] tagtime_p2;
-            reg [63:0] tagtime_p3;
-            reg [63:0] tagtime_p4;
             reg [31:0] tdata_p;
-            reg [31:0] tdata_p2;
-            reg [31:0] tdata_p3;
-            reg [31:0] tdata_p4;
-            reg [31:0] tdata_p5;
-            reg [31:0] tdata_p6;
             reg [31:0] wrap_count_p;
-            reg [31:0] wrap_count_p2;
 
-            assign counter = tdata_p2[11:0];
-            assign subtime = tdata_p4[23:12];
             always @(posedge clk) begin
                 if (rst == 1) begin
                     tagtime_p <= 0;
-                    tagtime_p2 <= 0;
-                    tagtime_p3 <= 0;
-                    tagtime_p4 <= 0;
                     wrap_count_p <= 0;
-                    wrap_count_p2 <= 0;
                     tdata_p <= 0;
-                    tdata_p2 <= 0;
-                    tdata_p3 <= 0;
-                    tdata_p4 <= 0;
-                    tdata_p5 <= 0;
-                    tdata_p6 <= 0;
                 end else if (s_axis_tready) begin
-                    tagtime_p <= {rollover_time_p, wrap_count_p2, counter} * 4000;
-                    tagtime_p2 <= tagtime_p;
-                    tagtime_p3 <= tagtime_p2 + subtime;
-                    tagtime_p4 <= tagtime_p3;
                     // Clear data if it's invalid
                     tdata_p <= (s_axis_tvalid & (s_axis_tkeep[4*i+:4] == 4'hF)) ? s_axis_tdata[32*i+:32] : 0;
                     wrap_count_p <= s_axis_tuser;
-                    wrap_count_p2 <= wrap_count_p;
-                    tdata_p2 <= tdata_p;
-                    tdata_p3 <= tdata_p2;
-                    tdata_p4 <= tdata_p3;
-                    tdata_p5 <= tdata_p4;
-                    tdata_p6 <= tdata_p5;
+
+                    subtime <= tdata_p[23:12];
+                    tagtime_p <= {rollover_time, wrap_count_p, tdata_p[11:0]} * 4000;
+                    event_type <= tdata_p[31:30];
+                    channel_number <= tdata_p[29:24];
+
+                    m_axis_tagtime[i] <= tagtime_p + subtime;
+                    m_axis_tkeep[i] <= (event_type == 2'b01) && (channel_number < (2 * CHANNEL_COUNT));
+                    if (channel_number < CHANNEL_COUNT) begin
+                         m_axis_channel[i] <= channel_number + 1;
+                    end else begin
+                         m_axis_channel[i] <= CHANNEL_COUNT - 1 - channel_number;
+                    end
+
                 end
             end
-
-            assign event_type = tdata_p6[31:30];
-            assign channel_number = tdata_p6[29:24];
-            assign valid_tag = (event_type == 2'b01) && (channel_number < (2 * CHANNEL_COUNT));
-            assign tagtime = tagtime_p4;
-
-            always @(*) begin
-                if (channel_number < CHANNEL_COUNT) begin
-                    channel = channel_number + 1;
-                end else begin
-                    channel = CHANNEL_COUNT - 1 - channel_number;
-                end
-            end
-
-            assign m_axis_tagtime[i] = tagtime;
-            assign m_axis_channel[i] = channel;
-            assign m_axis_tkeep[i]   = valid_tag;
         end
     endgenerate
     assign m_axis_tvalid = |m_axis_tkeep;
