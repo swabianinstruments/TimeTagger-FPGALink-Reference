@@ -44,18 +44,18 @@ module si_tag_converter #(
     input  wire [KEEP_WIDTH_IN-1:0] s_axis_tkeep,
     input  wire [           32-1:0] s_axis_tuser,   // Rollover time
 
-    output wire                       m_axis_tvalid,
-    input  wire                       m_axis_tready,
+    output wire                             m_axis_tvalid,
+    input  wire                             m_axis_tready,
     // The time the tag was captured at
     // In 1/3 ps since the startup of the TTX
-    output reg        [64-1:0]       m_axis_tagtime[NUMBER_OF_WORDS-1:0],
+    output reg        [             64-1:0] m_axis_tagtime[NUMBER_OF_WORDS-1:0],
     // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
-    output reg signed [   5:0]       m_axis_channel[NUMBER_OF_WORDS-1:0],
-    output reg [NUMBER_OF_WORDS-1:0] m_axis_tkeep,
+    output reg signed [                5:0] m_axis_channel[NUMBER_OF_WORDS-1:0],
+    output reg        [NUMBER_OF_WORDS-1:0] m_axis_tkeep,
 
     // Output of the lowest expected time for the next channels, to be able
     // to know that in certain time frame events *didn't* occur. Same format as tagtime
-    output reg [64-1:0]               lowest_time_bound
+    output reg [64-1:0] lowest_time_bound
 );
 
     assign s_axis_tready = m_axis_tready || !m_axis_tvalid;
@@ -76,38 +76,38 @@ module si_tag_converter #(
             lowest_time_bound_p2 <= 0;
             lowest_time_bound_p3 <= 0;
         end else if (s_axis_tready) begin
-             if(s_axis_tvalid & (s_axis_tkeep != 0)) begin
-                  s_axis_tuser_p <= s_axis_tuser;
-                  // Rollover occurred
-                  if (s_axis_tuser_p > s_axis_tuser) begin
-                       rollover_time <= rollover_time + 1;
-                  end
+            if (s_axis_tvalid & (s_axis_tkeep != 0)) begin
+                s_axis_tuser_p <= s_axis_tuser;
+                // Rollover occurred
+                if (s_axis_tuser_p > s_axis_tuser) begin
+                    rollover_time <= rollover_time + 1;
+                end
 
-                  lowest_time_bound_p1 <= {rollover_time, s_axis_tuser_p, {12{1'b0}}} * 4000;
-             end
+                lowest_time_bound_p1 <= {rollover_time, s_axis_tuser_p, {12{1'b0}}} * 4000;
+            end
 
-             // Delay to match the processing of the tagtime
-             lowest_time_bound_p2 <= lowest_time_bound_p1;
-             lowest_time_bound_p3 <= lowest_time_bound_p2;
+            // Delay to match the processing of the tagtime
+            lowest_time_bound_p2 <= lowest_time_bound_p1;
+            lowest_time_bound_p3 <= lowest_time_bound_p2;
 
-             if (lowest_time_bound_p3 > lowest_time_bound) begin
-                  lowest_time_bound <= lowest_time_bound_p3;
-             end
-             for(int i = 0; i<NUMBER_OF_WORDS; i += 1) begin
-                  if (m_axis_tkeep[i]) begin
-                       // The tagtime is always equal or higher than lowest_time_bound_p3 and lowest_time_bound
-                       // as it's sorted
-                       lowest_time_bound <= m_axis_tagtime[i];
-                  end
-             end
+            if (lowest_time_bound_p3 > lowest_time_bound) begin
+                lowest_time_bound <= lowest_time_bound_p3;
+            end
+            for (int i = 0; i < NUMBER_OF_WORDS; i += 1) begin
+                if (m_axis_tkeep[i]) begin
+                    // The tagtime is always equal or higher than lowest_time_bound_p3 and lowest_time_bound
+                    // as it's sorted
+                    lowest_time_bound <= m_axis_tagtime[i];
+                end
+            end
         end
     end
 
     genvar i;
     generate
         for (i = 0; i < NUMBER_OF_WORDS; i += 1) begin
-            reg [1:0] event_type;
-            reg [5:0] channel_number;
+            reg [ 1:0] event_type;
+            reg [ 5:0] channel_number;
             reg [11:0] subtime;
             reg [63:0] tagtime_p;
             reg [31:0] tdata_p;
@@ -131,9 +131,9 @@ module si_tag_converter #(
                     m_axis_tagtime[i] <= tagtime_p + subtime;
                     m_axis_tkeep[i] <= (event_type == 2'b01) && (channel_number < (2 * CHANNEL_COUNT));
                     if (channel_number < CHANNEL_COUNT) begin
-                         m_axis_channel[i] <= channel_number + 1;
+                        m_axis_channel[i] <= channel_number + 1;
                     end else begin
-                         m_axis_channel[i] <= CHANNEL_COUNT - 1 - channel_number;
+                        m_axis_channel[i] <= CHANNEL_COUNT - 1 - channel_number;
                     end
 
                 end
