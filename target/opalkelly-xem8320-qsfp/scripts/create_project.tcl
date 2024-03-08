@@ -38,12 +38,12 @@ set files [list \
  "[file normalize "$frontpanel_dir/okWireIn.v"]"\
  "[file normalize "$frontpanel_dir/okWireOut.v"]"\
  "[file normalize "$target_dir/hdl/xem8320_reference_qsfp.sv"]"\
- "[file normalize "$target_dir/hdl/sfpp1_eth_10g_axis.sv"]"\
+ "[file normalize "$target_dir/hdl/qsfpp1_eth_40g_axis.sv"]"\
+ "[file normalize "$target_dir/hdl/xlgmii_axis_bridge.sv"]"\
+ "[file normalize "$target_dir/hdl/xlgmii_axis_bridge_rx_128b.sv"]"\
+ "[file normalize "$target_dir/hdl/xlgmii_axis_bridge_tx_128b.sv"]"\
  "[file normalize "$origin_dir/hdl/eth_axis_fcs_checker_128b.sv"]"\
  "[file normalize "$origin_dir/hdl/wb_master.sv"]"\
- "[file normalize "$origin_dir/hdl/xgmii_axis_bridge.sv"]"\
- "[file normalize "$origin_dir/hdl/xgmii_axis_bridge_rx_64b.sv"]"\
- "[file normalize "$origin_dir/hdl/xgmii_axis_bridge_tx_64b.sv"]"\
  "[file normalize "$origin_dir/hdl/data_channel.sv"]"\
  "[file normalize "$origin_dir/hdl/header_detacher.sv"]"\
  "[file normalize "$origin_dir/hdl/header_parser.sv"]"\
@@ -59,17 +59,6 @@ set files [list \
  "[file normalize "$origin_dir/hdl/histogram/wide_divider.sv"]"\
  "[file normalize "$origin_dir/hdl/histogram/wide_mult.sv"]"\
  "[file normalize "$origin_dir/gen_srcs/eth_crc_128b_comb.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_rx.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_rx_if.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_rx_frame_sync.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_rx_ber_mon.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_rx_watchdog.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_tx.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/eth_phy_10g_tx_if.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/xgmii_baser_dec_64.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/xgmii_baser_enc_64.v"]"\
- "[file normalize "$origin_dir/3rdparty/verilog-ethernet/rtl/lfsr.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/sync_reset.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/axis_adapter.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/axis_async_fifo_adapter.v"]"\
@@ -87,7 +76,7 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 
 set obj [get_filesets sources_1]
 add_files -norecurse -fileset $obj $files
-source "$target_dir/scripts/sfpp1_eth_10g_gth.tcl"
+source "$target_dir/scripts/qsfpp1_eth_40g_phy.tcl"
 set_property "top" "xem8320_reference_qsfp" $obj
 
 # Generating MMCM ###########################################################

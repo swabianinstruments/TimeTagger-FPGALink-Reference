@@ -1,8 +1,8 @@
 # OpalKelly XEM8320 QSFP Time Tagger FPGA Link Reference Project
 
 This directory and its subdirectories constitute a reference design for the Time
-Tagger FPGA Link on the OpalKelly XEM8320 FPGA board with a SZG-QSFP Module. It implements the 40Gbit/s
-Ethernet Time Tagger FPGA link interfaces.
+Tagger FPGA Link on the OpalKelly XEM8320 FPGA board with a SZG-QSFP Module on
+port E. It implements the 40Gbit/s Ethernet Time Tagger FPGA link interfaces.
 
 ## Getting Started
 
@@ -39,15 +39,15 @@ vivado -mode tcl -source scripts/create_project.tcl
 
 # current_run -implementation [get_runs impl_1]
 # puts "Successfully created project ${project_name}!"
-Successfully created project xem8320-timetagger-fpgalink-reference!
+Successfully created project xem8320-qsfp-timetagger-fpgalink-reference!
 # exit
 INFO: [Common 17-206] Exiting Vivado [..]
 ```
 
 The FPGA bitstream can be built from within Vivado by opening the generated
-project file (`xem8320-timetagger-fpgalink-reference.xpr`), or by running `make
-all` instead of or after `make project`. It will be located under
-`xem8320-timetagger-fpgalink-reference.runs/impl_1/xem8320_reference.bit`.
+project file (`xem8320-qsfp-timetagger-fpgalink-reference.xpr`), or by running `make
+all` instead of `make project`. It will be located under
+`xem8320-qsfp-timetagger-fpgalink-reference.runs/impl_1/xem8320_reference_qsfp.bit`.
 
 Once built, the bitstream can be programmed onto the FPGA either via a
 compatible JTAG-adapter (such as the Xilinx Platform Cable II), or using the
@@ -61,16 +61,15 @@ si@ubuntu:target/opalkelly-xem8320-qsfp$ python3
 >>> xem = ok.FrontPanel()
 >>> xem.OpenBySerial()
 0
->>> xem.ConfigureFPGA("xem8320-timetagger-fpgalink-reference.runs/impl_1/xem8320_reference.bit")
+>>> xem.ConfigureFPGA("xem8320-qsfp-timetagger-fpgalink-reference.runs/impl_1/xem8320_reference_qsfp.bit")
 0
 ```
 
-To use the SFP+ modules and the onboard LEDs, the
-[VIO1](https://docs.opalkelly.com/xem8320/leds/) &
-[VIO2](https://docs.opalkelly.com/xem8320/gigabit-transceivers/) voltages need to
-be enabled without a SYZYGY module connected. This project includes a script to
-configure the voltage rails accordingly in SmartVIO hybrid mode. This script
-must be executed from within the `host` subdirectory, as illustrated below:
+To use the onboard LEDs, the [VIO1](https://docs.opalkelly.com/xem8320/leds/)
+voltage needs to be enabled without a SYZYGY module connected. This project
+includes a script to configure the voltage rails accordingly in SmartVIO hybrid
+mode. This script must be executed from within the `host` subdirectory, as
+illustrated below:
 
 ``` sh
 si@ubuntu:target/opalkelly-xem8320-qsfp$ pushd host
@@ -89,10 +88,11 @@ si@ubuntu:target/opalkelly-xem8320-qsfp/host$ popd
 
 These settings are only applied after a power-cycle of the XEM8320-board.
 
-With a connected TTX with FPGA-Link Output enabled, you can now enable Channel 1
+With a connected TTX with FPGA-Link Output for QSFP enabled, you can now enable Channel 1
 capture and observe the LED on the XEM8320 matching the input state of the TTX.
 
 ## Debug Information
+
 The design exposes various statistics of the received tags over the OpalKelly
 USB interface, which bridges onto an internal Wishbone Bus. This can be read with the following
 
@@ -121,18 +121,18 @@ si@ubuntu:target/opalkelly-xem8320-qsfp/host$ python3 -m common.sfp monitor --de
 Connected to device Opal Kelly XEM8320 with serial 0123456789!
 Connected to the following SFP module:
 
-Vendor:		OEM
-OUI:		0x009065
-Rev:		A
-PN:		SFP-10G-LR
-SN:		01234567890
-DC:		012345
-Type:		SFPSFPP (0x03)
-Connector:	LC (0x07)
-Bitrate:	10300 MBd
-Wavelength:	1310 nm
-		        SM    OM1    OM1    OM3    OM4
-Max length:	   10000 m    0 m    0 m    0 m    0 m
+Vendor:  OEM
+OUI:  0x009065
+Rev:  A
+PN:  SFP-10G-LR
+SN:  01234567890
+DC:  012345
+Type:  SFPSFPP (0x03)
+Connector: LC (0x07)
+Bitrate: 10300 MBd
+Wavelength: 1310 nm
+          SM    OM1    OM1    OM3    OM4
+Max length:    10000 m    0 m    0 m    0 m    0 m
 
 
 Diagnostics:
@@ -188,8 +188,8 @@ The tag time difference detector contains the following registers:
 To modify this reference design for your own purposes, please take a look at
 `hdl/user_sample.sv` in the top level directory.
 
-The user sample file receives the `tagtime` in 1/3 ps, the `channel` (zero indexed) and the rising/falling edge for
-each event. This should only be sampled if `valid_tag` is set.
+The user sample file receives the `tagtime`s in 1/3 ps, the `channel`s (zero indexed) and the rising/falling edge for
+each event. The input should only be sampled when `s_axis_tvalid` is set and only for the word where the corresponding `s_axis_tkeep` bit is set
 
 The code inside the user sample is only there for demonstration purposes and can
 be removed if so desired. Avoid modifying the rest of the reference design as

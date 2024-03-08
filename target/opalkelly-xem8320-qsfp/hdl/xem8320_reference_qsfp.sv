@@ -18,6 +18,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/* This project serves as a reference design for the Time Tagger FPGA Link on the OpalKelly XEM8320 FPGA board.
+ * To create the bitfile for this project, a Xilinx EF-DI-LAUI-SITE IP core license is necessary. Furthermore,
+ * a SZG-QSFP Module should be connected to port E of the OpalKelly XEM8320 FPGA board to establish a 40Gbit/s
+ * Ethernet connection between the Swabian Instruments TTX device and this OpalKelly board.
+ */
+
 // verilog_format: off
  `resetall
  `timescale 1ns / 1ps
@@ -41,25 +47,24 @@ module xem8320_reference_qsfp #(
     inout  wire        okAA,
     input  wire        reset,
 
-    // SFP+ Transceiver Common Reference Clock
-    input wire sfpp_mgtrefclk_p,
-    input wire sfpp_mgtrefclk_n,
+    // QSFP+ Port 1 Reference Clock
+    input wire qsfpp1_mgtrefclk_p,
+    input wire qsfpp1_mgtrefclk_n,
 
-    // SFP+ Port 1 I2C Management Interface
-    inout  wire sfpp1_i2c_sda,
-    inout  wire sfpp1_i2c_scl,
-    output wire sfpp1_rs0,
-    output wire sfpp1_rs1,
-    input  wire sfpp1_mod_abs,
-    input  wire sfpp1_rc_los,
-    output wire sfpp1_tx_disable,
-    input  wire sfpp1_tx_fault,
+    // QSFP+ Port 1 Diffpairs
+    input  wire [3:0] qsfpp1_rx_p,
+    output wire [3:0] qsfpp1_tx_p,
+    input  wire [3:0] qsfpp1_rx_n,
+    output wire [3:0] qsfpp1_tx_n,
 
-    // SFP+ Port 1 Lanes
-    output wire sfpp1_tx_p,
-    output wire sfpp1_tx_n,
-    input  wire sfpp1_rx_p,
-    input  wire sfpp1_rx_n,
+    // QSFP+ Port 1 Control Signals
+    inout  wire qsfpp1_i2c_sda,
+    inout  wire qsfpp1_i2c_scl,
+    output wire qsfpp1_modsel_b,
+    output wire qsfpp1_reset_b,
+    output wire qsfpp1_lp_mode,
+    input  wire qsfpp1_modprs_b,
+    input  wire qsfpp1_int_b,
 
     // sys_clk
     input wire sys_clkp,
@@ -71,7 +76,7 @@ module xem8320_reference_qsfp #(
     // --------------------------------------------------- //
     // ---------------- LOCAL PARAMETERS-- --------------- //
     // --------------------------------------------------- //
-    localparam GT_WORD_WIDTH = 2;  // 2 ==> 10G, 4 ==> 40G
+    localparam GT_WORD_WIDTH = 4;  // 2 ==> 10G, 4 ==> 40G
     localparam GT_DATA_WIDTH = 32 * GT_WORD_WIDTH;
     localparam GT_KEEP_WIDTH = ((GT_DATA_WIDTH + 7) / 8);
 
@@ -244,32 +249,33 @@ module xem8320_reference_qsfp #(
     end
 
     // --------------------------------------------------- //
-    // -------------- SFP+ PORT 1 INTERFACE -------------- //
+    // ------------- QSFP+ PORT 1 INTERFACE -------------- //
     // --------------------------------------------------- //
 
-    // ---------- SFP+ PORT 1 MANAGEMENT INTERFACE I2C-WB CORE ----------
-    wire sfpp1_i2c_scl_in;
-    wire sfpp1_i2c_scl_out;
-    wire sfpp1_i2c_scl_out_en;
-    wire sfpp1_i2c_sda_in;
-    wire sfpp1_i2c_sda_out;
-    wire sfpp1_i2c_sda_out_en;
+    // ---------- QSFP+ PORT 1 MANAGEMENT INTERFACE I2C-WB CORE ----------
+    wire qsfpp1_i2c_scl_in;
+    wire qsfpp1_i2c_scl_out;
+    wire qsfpp1_i2c_scl_out_en;
+    wire qsfpp1_i2c_sda_in;
+    wire qsfpp1_i2c_sda_out;
+    wire qsfpp1_i2c_sda_out_en;
 
-    IOBUF sfpp1_i2c_scl_iobuf (
-        .O (sfpp1_i2c_scl_in),
-        .IO(sfpp1_i2c_scl),
-        .I (sfpp1_i2c_scl_out),
-        .T (sfpp1_i2c_scl_out_en)
+    IOBUF qsfpp1_i2c_scl_iobuf (
+        .O (qsfpp1_i2c_scl_in),
+        .IO(qsfpp1_i2c_scl),
+        .I (qsfpp1_i2c_scl_out),
+        .T (qsfpp1_i2c_scl_out_en)
     );
 
-    IOBUF sfpp1_i2c_sda_iobuf (
-        .O (sfpp1_i2c_sda_in),
-        .IO(sfpp1_i2c_sda),
-        .I (sfpp1_i2c_sda_out),
-        .T (sfpp1_i2c_sda_out_en)
+    IOBUF qsfpp1_i2c_sda_iobuf (
+        .O (qsfpp1_i2c_sda_in),
+        .IO(qsfpp1_i2c_sda),
+        .I (qsfpp1_i2c_sda_out),
+        .T (qsfpp1_i2c_sda_out_en)
     );
 
-    i2c_master_top i2c_sfpp (
+    // i2c interface for QSFP+
+    i2c_master_top i2c_qsfpp (
         .wb_clk_i(sys_clk),
         .wb_rst_i(sys_clk_rst),
         .arst_i(1),
@@ -281,34 +287,15 @@ module xem8320_reference_qsfp #(
         .wb_cyc_i(wb_array[i2c_master].cyc),
         .wb_ack_o(wb_array[i2c_master].ack),
         .wb_inta_o(),
-        .scl_pad_i(sfpp1_i2c_scl_in),
-        .scl_pad_o(sfpp1_i2c_scl_out),
-        .scl_padoen_o(sfpp1_i2c_scl_out_en),
-        .sda_pad_i(sfpp1_i2c_sda_in),
-        .sda_pad_o(sfpp1_i2c_sda_out),
-        .sda_padoen_o(sfpp1_i2c_sda_out_en)
+        .scl_pad_i(qsfpp1_i2c_scl_in),
+        .scl_pad_o(qsfpp1_i2c_scl_out),
+        .scl_padoen_o(qsfpp1_i2c_scl_out_en),
+        .sda_pad_i(qsfpp1_i2c_sda_in),
+        .sda_pad_o(qsfpp1_i2c_sda_out),
+        .sda_padoen_o(qsfpp1_i2c_sda_out_en)
     );
 
-
-
-    // ---------- SFP+ PORT 1 (incl. TRANSCEIVER + PHY + AXI4-STREAM) ----------
-    assign sfpp1_tx_disable = 0;
-    assign sfpp1_rs0 = 1;
-    assign sfpp1_rs1 = 1;
-
-    wire sfpp_mgtrefclk;
-
-    IBUFDS_GTE4 #(
-        .REFCLK_EN_TX_PATH(1'b0),
-        .REFCLK_HROW_CK_SEL(2'b00),  // UG576 p28
-        .REFCLK_ICNTL_RX(2'b00)
-    ) qsfp_mgtrefclk_inbuf (
-        .O(sfpp_mgtrefclk),
-        .ODIV2(),
-        .CEB(0),
-        .I(sfpp_mgtrefclk_p),
-        .IB(sfpp_mgtrefclk_n)
-    );
+    // ---------- QSFP+ PORT 1 (incl. TRANSCEIVER + PHY + AXI4-STREAM) ----------
 
     wire                     eth_axis_tx_clk;
     wire                     eth_axis_tx_rst;
@@ -332,19 +319,20 @@ module xem8320_reference_qsfp #(
     assign eth_axis_tx_tlast  = 0;
 
     // Transceiver + PHY
-    sfpp1_eth_10g_axis sfpp1_eth_10g_axis_inst (
+    qsfpp1_eth_40g_axis qsfpp1_eth_40g_axis_inst (
         .wb(wb_array[ethernet]),
 
         .freerun_clk(okClk),
         .freerun_rst(okRst),
 
-        .mgtrefclk(sfpp_mgtrefclk),
-        .pll_lock(1'b1),  // no PLL
+        .mgtrefclk_p(qsfpp1_mgtrefclk_p),
+        .mgtrefclk_n(qsfpp1_mgtrefclk_n),
+        .pll_lock(1'b1),
 
-        .sfpp_rx_p(sfpp1_rx_p),
-        .sfpp_rx_n(sfpp1_rx_n),
-        .sfpp_tx_p(sfpp1_tx_p),
-        .sfpp_tx_n(sfpp1_tx_n),
+        .qsfpp_rx_p(qsfpp1_rx_p),
+        .qsfpp_rx_n(qsfpp1_rx_n),
+        .qsfpp_tx_p(qsfpp1_tx_p),
+        .qsfpp_tx_n(qsfpp1_tx_n),
 
         .axis_tx_clk(eth_axis_tx_clk),
         .axis_tx_rst(eth_axis_tx_rst),

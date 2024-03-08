@@ -1,4 +1,4 @@
-open_project xem8320-timetagger-fpgalink-reference.xpr
+open_project xem8320-qsfp-timetagger-fpgalink-reference.xpr
 launch_runs synth_1
 wait_on_run synth_1
 
