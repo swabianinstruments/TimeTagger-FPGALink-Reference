@@ -25,13 +25,17 @@ contained within the respective board target directories.
 
 ## Measurement Features
 
-This reference design contains the following measurement feature:
+This reference design contains the following measurement features:
 
 ### Histogram
 
 The Histogram module enables the processing of time tags received from the Time Tagger X effectively. It is designed to measure the time differences between events in two distinct channels. The calculated time differences are then presented in a histogram, offering valuable insights into the distribution of these time differences. The resulting data can be transmitted to a PC for further analysis or be analyzed inside the FPGA using another module. Additionally, for users intending to process the histogram data within the FPGA, the Histogram module provides these statistics: weighted means, index of the bin with the largest value, and variance.
 
-For detailed information on this module's usage and configuration, refer to the its documentation:
+### Counter
+
+The Counter module is designed to measure the number of tags received in each channel continuously. Time Tagger X, equipped with multiple input channels, detects events on each channel independently. The event times are then organized into time tags and transmitted to the FPGA module containing the Counter module. This module reports the number of tags for each channel within defined intervals, offering a quantitative measure of event occurrences over time. This periodic information is valuable for understanding the activity levels in individual channels.
+
+For detailed information on the usage and configuration of the modules, refer to the their documentation:
 
 - [Histogram Module Documentation](histogram.md)
 

@@ -58,6 +58,8 @@ set files [list \
  "[file normalize "$origin_dir/hdl/histogram/Hist_1lane.sv"]"\
  "[file normalize "$origin_dir/hdl/histogram/wide_divider.sv"]"\
  "[file normalize "$origin_dir/hdl/histogram/wide_mult.sv"]"\
+ "[file normalize "$origin_dir/hdl/countrate.sv"]"\
+ "[file normalize "$origin_dir/hdl/counter_wrapper.sv"]"\
  "[file normalize "$origin_dir/gen_srcs/eth_crc_128b_comb.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/sync_reset.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/axis_adapter.v"]"\
