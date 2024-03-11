@@ -8,6 +8,11 @@
  *
  * Authors:
  * - 2023-2024 Ehsan Jokar <ehsan@swabianinstruments.com>
+ *
+ * This file is provided under the terms and conditions of the BSD 3-Clause
+ * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 // verilog_format: off
@@ -56,10 +61,6 @@ module countrate #(
     after assetion of start_counting.
     */
     input wire start_counting,
-    /* when reset_counting is asserted, all the process is reset, and the
-    core waits for asserting start_counting.
-    */
-    input wire reset_counting,
 
     //Each lane represents the count of detected tags in its respective channel.
     output wire [COUNTER_WIDTH - 1 : 0] count_data[NUM_OF_CHANNELS],
@@ -84,9 +85,9 @@ module countrate #(
     logic [TOT_CHANNELS_WIDTH - 1 : 0] r1channel;
     logic [TAG_WIDTH - 1 : 0] r1window_size;
 
-    /*This signal indicate whether there is at least one valid tag or not.
-    If so, the inputs tagtime, channel, and valid_tag will be written into
-    the corresponding FIFO.*/
+    /* This signal indicate whether there is at least one valid tag or not.
+      If so, the inputs tagtime, channel, and valid_tag will be written into
+      the corresponding FIFO.*/
     logic valid_tag_or;
 
     always_ff @(posedge clk) begin
@@ -133,18 +134,18 @@ module countrate #(
         logic [CHANNEL_WIDTH - 1 : 0] channel[NUM_OF_TAGS];
     } data_type;
 
-    data_type data;
+    data_type data, r1data, data_mux;
     always_comb begin
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
-            if (fifo_data_valid) begin
-                data.valid[i] <= valid_tag_o[i];
-                data.time_tag[i] <= tagtime_o[i*TAG_WIDTH+:TAG_WIDTH];
-                data.channel[i] <= channel_o[i*CHANNEL_WIDTH+:CHANNEL_WIDTH];
-            end
+            data.valid[i] <= valid_tag_o[i];
+            data.time_tag[i] <= tagtime_o[i*TAG_WIDTH+:TAG_WIDTH];
+            data.channel[i] <= channel_o[i*CHANNEL_WIDTH+:CHANNEL_WIDTH];
 
         end
     end
-
+    always_ff @(posedge clk) begin
+        if (fifo_data_valid) r1data <= data;
+    end
     //------------------------------------------------------------------//
     // Updating the window information
     logic start_counting_hold = 0;
@@ -156,25 +157,30 @@ module countrate #(
     localparam DELAY_BUFF_SIZE = 3;
     logic [DELAY_BUFF_SIZE -1 : 0] update_window_delays = 0;
 
+    always_comb begin
+        data_mux <= data;
+        if (r1extended_valid) data_mux <= r1data;
+    end
+
     /* Window is updated when update_window is asserted. If all the valid tags in the current
-    clock cycle belong to the current window, update_window would be zero. If valid tags belong
-    to both the current window and the next one, update_window will be asserted immediately and
-    remains high for one clock cycle. Therefore, window will be updated, and the tags at the next
-    clock cycle would be compared with the updated window. If a tag belongs to a window that is
-    neither the current window nor the next one (at least two windows away), no data will be read
-    from the FIFOs, and the updating process continues until the window becomes the next window
-    for the last valid tag.
-    */
+      clock cycle belong to the current window, update_window would be zero. If valid tags belong
+      to both the current window and the next one, update_window will be asserted immediately and
+      remains high for one clock cycle. Therefore, window will be updated, and the tags at the next
+      clock cycle would be compared with the updated window. If a tag belongs to a window that is
+      neither the current window nor the next one (at least two windows away), no data will be read
+      from the FIFOs, and the updating process continues until the window becomes the next window
+      for the last valid tag.
+      */
 
     always_ff @(posedge clk) begin
         // resetting start_measurement for the next measurement
-        if (rst || reset_counting) begin
+        if (rst) begin
             start_measurement <= 0;
         end
 
         /* When start_counting is asserted, start_counting_hold will be set to one and remain
-        high until receiving a valid tag to initialize the window information.*/
-        if (rst || reset_counting || (start_counting_hold && fifo_data_valid)) begin
+         high until receiving a valid tag to initialize the window information.*/
+        if (rst || (start_counting_hold && fifo_data_valid)) begin
             start_counting_hold <= 0;
         end else if (start_counting) begin
             start_counting_hold <= 1;
@@ -202,17 +208,17 @@ module countrate #(
         update_window_delays[DELAY_BUFF_SIZE-1 : 0] <= {update_window_delays[DELAY_BUFF_SIZE-2 : 0], update_window};
     end
     //------------------------------------------------------------------//
-    // calculating the difference between data.time_tag and the end of the current and next windows
+    // calculating the difference between data_mux.time_tag and the end of the current and next windows
 
     /* Here, we employ differentiators instead of comparators to determine whether a tag belongs to
-    the current window, the next one, or neither. The key concept here is that using differentiators
-    enables us to conduct comparisons even when one of the operands overflows. This capability allows
-    us to process tags to infinity.*/
+      the current window, the next one, or neither. The key concept here is that using differentiators
+      enables us to conduct comparisons even when one of the operands overflows. This capability allows
+      us to process tags to infinity.*/
     logic [TAG_WIDTH - 1 : 0] difference[2][NUM_OF_TAGS];
     always_comb begin
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
-            difference[0][i] <= data.time_tag[i] - window_end;
-            difference[1][i] <= data.time_tag[i] - next_window_end;
+            difference[0][i] <= data_mux.time_tag[i] - window_end;
+            difference[1][i] <= data_mux.time_tag[i] - next_window_end;
         end
     end
     //------------------------------------------------------------------//
@@ -230,6 +236,7 @@ module countrate #(
     */
     logic r0inp_fifo_rd_en = 1;
     logic extended_valid = 0;
+    logic r1extended_valid;
     always_comb begin
         r0inp_fifo_rd_en = inp_fifo_rd_en;
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
@@ -246,7 +253,8 @@ module countrate #(
         extended_valid = !r0inp_fifo_rd_en;
     end
     always_ff @(posedge clk) begin
-        inp_fifo_rd_en <= r0inp_fifo_rd_en;
+        inp_fifo_rd_en   <= r0inp_fifo_rd_en;
+        r1extended_valid <= extended_valid;
     end
 
     /*
@@ -262,8 +270,8 @@ module countrate #(
     always_comb begin
         update_window <= 0;
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
-            if (data.valid[i] && (fifo_data_valid || extended_valid) && start_measurement) begin
-                // !difference[0][i][TAG_WIDTH-1] is the same as data.time_tag[i] >= window_end
+            if (data_mux.valid[i] && (fifo_data_valid || r1extended_valid) && start_measurement) begin
+                // !difference[0][i][TAG_WIDTH-1] is the same as data_mux.time_tag[i] >= window_end
                 if (!difference[0][i][TAG_WIDTH-1]) begin
                     update_window <= 1;
                 end
@@ -292,19 +300,19 @@ module countrate #(
     always_ff @(posedge clk) begin
         detected_channel <= '{default: '0};
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
-            if (data.valid[i] && (fifo_data_valid || extended_valid) && start_measurement) begin
-                // difference[0][i][TAG_WIDTH-1] is the same as data.time_tag[i] < window_end
+            if (data_mux.valid[i] && (fifo_data_valid || extended_valid) && start_measurement) begin
+                // difference[0][i][TAG_WIDTH-1] is the same as data_mux.time_tag[i] < window_end
                 if (difference[0][i][TAG_WIDTH-1] && fifo_data_valid) begin
                     for (int j = 0; j < NUM_OF_CHANNELS; j++) begin
-                        if (j == data.channel[i]) begin
+                        if (j == data_mux.channel[i]) begin
                             detected_channel[0][j][i] <= 1;
                         end
                     end
-                end  // difference[1][i][TAG_WIDTH-1] is the same as data.time_tag[i] < next_window_end
-                     // !difference[0][i][TAG_WIDTH-1] is the same as data.time_tag[i] >= window_end
+                end  // difference[1][i][TAG_WIDTH-1] is the same as data_mux.time_tag[i] < next_window_end
+                     // !difference[0][i][TAG_WIDTH-1] is the same as data_mux.time_tag[i] >= window_end
                 else if (difference[1][i][TAG_WIDTH-1] && !difference[0][i][TAG_WIDTH-1]) begin
                     for (int j = 0; j < NUM_OF_CHANNELS; j++) begin
-                        if (j == data.channel[i]) begin
+                        if (j == data_mux.channel[i]) begin
                             detected_channel[1][j][i] <= 1;
                         end
                     end
@@ -334,29 +342,29 @@ module countrate #(
     // this registers are used to capture the value of the counter by the end of the window
     logic [COUNTER_WIDTH - 1 : 0] counters_reg[NUM_OF_CHANNELS];
     always_ff @(posedge clk) begin
-        partial_sum  <= r0partial_sum;
+        partial_sum <= r0partial_sum;
         // reset the counters for a new measurement
 
-        counters_reg <= '{default: 'X};
+        // Latch the counters_reg value for sequential reading.
         if (start_measurement) begin
             for (int i = 0; i < NUM_OF_CHANNELS; i++) begin
-                /*update_window_delays[1] is the delayed update_window signal aligned with partial_sum.
-                If it's zero, counters will be updated for the current window. If not, counters will be
-                initialized with partial_sum[1] which is the tags information belong to the next window.
-                */
+                /* update_window_delays[1] is the delayed update_window signal aligned with partial_sum.
+               If it's zero, counters will be updated for the current window. If not, counters will be
+               initialized with partial_sum[1] which is the tags information belong to the next window.
+            */
                 counters[i] <= counters[i] + partial_sum[0][i];
                 if (update_window_delays[1]) begin
                     counters[i] <= partial_sum[1][i];
-                    /*When 'update_window_delays[1]' is asserted, the last 'partial_sum[0]' values are
-                    added to the counters, and the resulting sums are registered at 'counters_reg'.
-                    This guarantees that information from all tags has been accounted for.
-                    */
+                    /* When 'update_window_delays[1]' is asserted, the last 'partial_sum[0]' values are
+                  added to the counters, and the resulting sums are registered at 'counters_reg'.
+                  This guarantees that information from all tags has been accounted for.
+               */
                     counters_reg[i] <= counters[i] + partial_sum[0][i];
                 end
             end
         end
 
-        if (rst || reset_counting) begin
+        if (rst) begin
             counters <= '{default: '0};
         end
     end

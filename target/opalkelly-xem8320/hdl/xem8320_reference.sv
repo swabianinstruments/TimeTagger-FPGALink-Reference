@@ -526,7 +526,8 @@ module xem8320_reference #(
         .s_axis_tagtime(measurement_inp_tagtime),
 
         .wb_user_sample(wb_array[user_sample]),  // wb interface for user_sample module
-        .wb_histogram  (wb_array[histogram]),    // wb interface for histogram module
+        .wb_histogram(wb_array[histogram]),  // wb interface for histogram module
+        .wb_counter(wb_array[counter]),  // wb interface for counter module
 
         //------------------------------------------//
         //---- add wb interface for your modules ----//
