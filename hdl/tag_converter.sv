@@ -92,7 +92,7 @@ module si_tag_converter #(
             lowest_time_bound_p2 <= lowest_time_bound_p1;
             lowest_time_bound_p3 <= lowest_time_bound_p2;
 
-            if (lowest_time_bound_p3 > lowest_time_bound) begin
+            if ($signed(lowest_time_bound_p3 - lowest_time_bound) > 0) begin
                 lowest_time_bound <= lowest_time_bound_p3;
             end
             for (int i = 0; i < NUMBER_OF_WORDS; i += 1) begin
