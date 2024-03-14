@@ -117,9 +117,17 @@ module si_tag_converter #(
 
             always @(posedge clk) begin
                 if (rst == 1) begin
-                    tagtime_p <= 0;
-                    rollover_time_p <= 0;
+                    rollover_time_p <= 'X;
                     tdata_p <= 0;
+
+                    subtime <= 'X;
+                    tagtime_p <= 'X;
+                    event_type <= 0;
+                    channel_number <= 'X;
+
+                    m_axis_tagtime[i] <= 'X;
+                    m_axis_tkeep[i] <= 0;
+                    m_axis_channel[i] <= 'X;
                 end else if (s_axis_tready) begin
                     // Clear data if it's invalid
                     tdata_p <= (s_axis_tvalid & (s_axis_tkeep[4*i+:4] == 4'hF)) ? s_axis_tdata[32*i+:32] : 0;
