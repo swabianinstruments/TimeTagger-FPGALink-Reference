@@ -30,9 +30,11 @@ module si_tag_converter #(
     // This is the internal channel count and should be kept at 20 for the TTX
     parameter CHANNEL_COUNT = 20,
 
-    parameter DATA_WIDTH_IN   = 128,
-    parameter KEEP_WIDTH_IN   = (DATA_WIDTH_IN + 7) / 8,
-    parameter NUMBER_OF_WORDS = (DATA_WIDTH_IN + 31) / 32
+    parameter DATA_WIDTH_IN = 128,
+    parameter KEEP_WIDTH_IN = (DATA_WIDTH_IN + 7) / 8,
+    parameter NUMBER_OF_WORDS = (DATA_WIDTH_IN + 31) / 32,
+    // DO NOT CHANGE multiplier for TTX count field to subtime unit
+    parameter TAG_COUNT_TO_SUBTIME = 4000
 ) (
     input wire clk,
     input wire rst,
@@ -83,7 +85,7 @@ module si_tag_converter #(
                     extended_rollover_time <= extended_rollover_time + 1;
                 end
 
-                lowest_time_bound_p1 <= {extended_rollover_time, s_axis_tuser_p, {12{1'b0}}} * 4000;
+                lowest_time_bound_p1 <= {extended_rollover_time, s_axis_tuser_p, {12{1'b0}}} * TAG_COUNT_TO_SUBTIME;
             end
 
             // Delay to match the processing of the tagtime
@@ -124,7 +126,7 @@ module si_tag_converter #(
                     rollover_time_p <= s_axis_tuser;
 
                     subtime <= tdata_p[23:12];
-                    tagtime_p <= {extended_rollover_time, rollover_time_p, tdata_p[11:0]} * 4000;
+                    tagtime_p <= {extended_rollover_time, rollover_time_p, tdata_p[11:0]} * TAG_COUNT_TO_SUBTIME;
                     event_type <= tdata_p[31:30];
                     channel_number <= tdata_p[29:24];
 
