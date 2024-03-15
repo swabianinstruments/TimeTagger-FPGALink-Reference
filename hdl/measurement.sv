@@ -33,12 +33,14 @@ module measurement #(
     // 1 if this module is able to accept new data in this clock period. Must always be 1
     output wire                         s_axis_tready,
     // The time the tag was captured at in 1/3 ps since the startup of the TTX
-    input  wire        [        64-1:0] s_axis_tagtime[WORD_WIDTH-1:0],
+    input  wire        [        64-1:0] s_axis_tagtime   [WORD_WIDTH-1:0],
     // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
-    input  wire signed [           5:0] s_axis_channel[WORD_WIDTH-1:0],
+    input  wire signed [           5:0] s_axis_channel   [WORD_WIDTH-1:0],
     // Each bit in s_axis_tkeep represents the validity of an event:
     // 1 for a valid event, 0 for no event in the corresponding bit position.
     input  wire        [WORD_WIDTH-1:0] s_axis_tkeep,
+    input  wire        [        64-1:0] lowest_time_bound,
+
 
     wb_interface.slave wb_user_sample,
     wb_interface.slave wb_histogram,
@@ -137,6 +139,7 @@ module measurement #(
         .clk(clk),
         .rst(rst),
         .tagtime(s_axis_tagtime_packed),
+        .lowest_time_bound(lowest_time_bound),
         .channel(s_axis_channel_packed),
         .valid_tag(s_axis_tkeep),
         .wb(wb_counter),

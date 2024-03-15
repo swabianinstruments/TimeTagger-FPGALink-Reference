@@ -408,8 +408,8 @@ module sfpp1_eth_10g_axis (
             if (wb.we) begin
                 // Write
                 casez (wb.adr[7:0])
-                    8'b000010??: transceiver_control <= wb.dat_o;
-                    8'b000100??: phy_control <= wb.dat_o;
+                    8'b000010??: transceiver_control <= wb.dat_i;
+                    8'b000100??: phy_control <= wb.dat_i;
                 endcase
             end else begin
                 // Read

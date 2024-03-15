@@ -48,8 +48,6 @@ module si_tag_converter #(
 
     output wire                             m_axis_tvalid,
     input  wire                             m_axis_tready,
-    // The time the tag was captured at
-    // In 1/3 ps since the startup of the TTX
     output reg        [             64-1:0] m_axis_tagtime[NUMBER_OF_WORDS-1:0],
     // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
     output reg signed [                5:0] m_axis_channel[NUMBER_OF_WORDS-1:0],

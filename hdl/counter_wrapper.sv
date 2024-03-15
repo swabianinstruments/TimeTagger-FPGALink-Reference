@@ -42,8 +42,9 @@ module counter_wrapper #(
     input wire clk,
     input wire rst,
 
-    input wire [NUM_OF_TAGS - 1 : 0] valid_tag,
-    input wire [TOT_TAGS_WIDTH - 1 : 0] tagtime,
+    input wire [       NUM_OF_TAGS - 1 : 0] valid_tag,
+    input wire [       NUM_OF_TAGS - 1 : 0] lowest_time_bound,
+    input wire [    TOT_TAGS_WIDTH - 1 : 0] tagtime,
     input wire [TOT_CHANNELS_WIDTH - 1 : 0] channel,
 
     //    Wishbone interface for control & status      		//
@@ -67,15 +68,28 @@ module counter_wrapper #(
     logic [NUM_OF_TAGS - 1 : 0] valid_tag_inp;
     logic [TOT_TAGS_WIDTH - 1 : 0] tagtime_inp;
     logic [TOT_CHANNELS_WIDTH - 1 : 0] channel_inp;
+    logic [NUM_OF_TAGS - 1 : 0] r1lowest_time_bound;
 
     // channel mapping
     always_ff @(posedge clk) begin
         valid_tag_inp <= valid_tag;
-        tagtime_inp   <= tagtime;
+        tagtime_inp <= tagtime;
+        r1lowest_time_bound <= lowest_time_bound;
 
         for (int i = 0; i < NUM_OF_TAGS; i++) begin
             channel_inp[i*CHANNEL_WIDTH+:CHANNEL_WIDTH] <= channel_lut[channel[i*CHANNEL_WIDTH+:CHANNEL_WIDTH]];
-            if (channel_lut[channel[i*CHANNEL_WIDTH+:CHANNEL_WIDTH]] >= NUM_OF_CHANNELS) valid_tag_inp[i] <= 0;
+        end
+
+        /* When the lowest_time_bound input changes, it can serve as the keep-alive tag. Essentially, it's utilized
+        to update the time information. Hence, when both the valid_tag and valid_tag_inp are zero, this information
+        becomes valuable. To address this, we designate it as data for the first lane, assigning it a channel number
+        outside the supported range of [0, NUM_OF_CHANNELS). Consequently, the countrate module can update the time
+        and window information even when none of the channel information is being updated.*/
+        if (lowest_time_bound != r1lowest_time_bound && (valid_tag | valid_tag_inp) == 0) begin
+            valid_tag_inp[0] <= 1;
+            tagtime_inp[0]   <= lowest_time_bound;
+            channel_inp[0]   <= NUM_OF_CHANNELS;
+
         end
     end
 
