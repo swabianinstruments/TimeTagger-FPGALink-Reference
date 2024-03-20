@@ -463,8 +463,10 @@ module xem8320_reference_qsfp #(
     // ----------- GENERATING 64 BIT TIMESTAMPS ---------- //
     // --------------------------------------------------- //
 
-    wire signed [                5:0] measurement_inp_channel[TC_WORD_WIDTH-1 : 0];
-    wire        [               63:0] measurement_inp_tagtime[TC_WORD_WIDTH-1 : 0];
+    wire signed [                5:0] measurement_inp_channel       [TC_WORD_WIDTH-1 : 0];
+    wire        [               63:0] measurement_inp_tagtime       [TC_WORD_WIDTH-1 : 0];
+    wire        [               63:0] measurement_lowest_time_bound;
+
     wire        [TC_WORD_WIDTH-1 : 0] measurement_inp_tkeep;
     wire                              measurement_inp_tready;
     wire                              measurement_inp_tvalid;
@@ -484,11 +486,12 @@ module xem8320_reference_qsfp #(
         .s_axis_tkeep(tag_stream_tkeep),
         .s_axis_tuser(tag_stream_tuser),
 
-        .m_axis_tvalid (measurement_inp_tvalid),
-        .m_axis_tready (measurement_inp_tready),
-        .m_axis_tkeep  (measurement_inp_tkeep),
+        .m_axis_tvalid(measurement_inp_tvalid),
+        .m_axis_tready(measurement_inp_tready),
+        .m_axis_tkeep(measurement_inp_tkeep),
         .m_axis_tagtime(measurement_inp_tagtime),
-        .m_axis_channel(measurement_inp_channel)
+        .m_axis_channel(measurement_inp_channel),
+        .lowest_time_bound(measurement_lowest_time_bound)
     );
 
     // --------------------------------------------------- //
@@ -507,11 +510,12 @@ module xem8320_reference_qsfp #(
         .clk(sys_clk),
         .rst(sys_clk_rst),
 
-        .s_axis_tvalid (measurement_inp_tvalid),
-        .s_axis_tready (measurement_inp_tready),
-        .s_axis_tkeep  (measurement_inp_tkeep),
+        .s_axis_tvalid(measurement_inp_tvalid),
+        .s_axis_tready(measurement_inp_tready),
+        .s_axis_tkeep(measurement_inp_tkeep),
         .s_axis_channel(measurement_inp_channel),
         .s_axis_tagtime(measurement_inp_tagtime),
+        .lowest_time_bound(measurement_lowest_time_bound),
 
         .wb_user_sample(wb_array[user_sample]),  // wb interface for user_sample module
         .wb_histogram(wb_array[histogram]),  // wb interface for histogram module
