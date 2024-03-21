@@ -156,6 +156,8 @@ module countrate #(
     logic update_window;
     localparam DELAY_BUFF_SIZE = 3;
     logic [DELAY_BUFF_SIZE -1 : 0] update_window_delays = 0;
+    logic extended_valid = 0;
+    logic r1extended_valid;
 
     always_comb begin
         data_mux <= data;
@@ -235,8 +237,6 @@ module countrate #(
     albeit at the expense of counting the number of tags associated with both the current and the next window.
     */
     logic r0inp_fifo_rd_en = 1;
-    logic extended_valid = 0;
-    logic r1extended_valid;
     always_comb begin
         r0inp_fifo_rd_en = inp_fifo_rd_en;
         for (int i = 0; i < NUM_OF_TAGS; i++) begin

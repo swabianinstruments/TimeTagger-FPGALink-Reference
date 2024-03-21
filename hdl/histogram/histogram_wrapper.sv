@@ -396,6 +396,17 @@ module histogram_wrapper #(
             logic [SQUARED_WEIGHTED_SUM_WIDTH : 0] partial_sum;
             logic [SQUARED_WEIGHTED_SUM_WIDTH : 0] subtraction;
 
+            // calculating offset: ∑n*x(n) / ∑x(n)
+            logic [WEIGHTED_SUM_WIDTH - 1 : 0] offset_quotient;
+            logic [SUM_WIDTH - 1 : 0] offset_reminder;
+            logic offset_validout;
+            logic [OFFSET_VALID_BUFF_WIDTH - 1 : 0] offset_validout_buff;
+
+            // calculating variance
+            logic [SQUARED_WEIGHTED_SUM_WIDTH : 0] variance_quotient;
+            logic [SUM_WIDTH - 1 : 0] variance_reminder;
+            logic variance_validout;
+
             always @(posedge clk) begin
                 // The index begins at 1 and extends up to HIST_MEM_ADDR_WIDTH.
                 // This ensures that the impact of the initial bin with an address
@@ -513,12 +524,7 @@ module histogram_wrapper #(
                 .din2 (data_value),    // x(n)
                 .dout (wide_mult2)     // n*n*x(n)
             );
-
             // calculating offset: ∑n*x(n) / ∑x(n)
-            logic [WEIGHTED_SUM_WIDTH - 1 : 0] offset_quotient;
-            logic [SUM_WIDTH - 1 : 0] offset_reminder;
-            logic offset_validout;
-            logic [OFFSET_VALID_BUFF_WIDTH - 1 : 0] offset_validout_buff;
             wide_divider #(
                 .DIVIDENT_WIDTH(WEIGHTED_SUM_WIDTH),
                 .DIVISOR_WIDTH (SUM_WIDTH)
@@ -555,11 +561,7 @@ module histogram_wrapper #(
                 .din2(weighted_sum_reg),  // ∑n*x(n)
                 .dout(wide_mult4)         // offset*∑n*x(n)
             );
-
             // calculating variance
-            logic [SQUARED_WEIGHTED_SUM_WIDTH : 0] variance_quotient;
-            logic [SUM_WIDTH - 1 : 0] variance_reminder;
-            logic variance_validout;
             wide_divider #(
                 .DIVIDENT_WIDTH(SQUARED_WEIGHTED_SUM_WIDTH + 1),
                 .DIVISOR_WIDTH (SUM_WIDTH)
