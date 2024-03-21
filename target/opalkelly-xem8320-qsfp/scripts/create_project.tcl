@@ -156,6 +156,9 @@ set_property "part" "$part" $obj
 # set the current synth run
 current_run -synthesis [get_runs synth_1]
 
+# Inferring to latch message will be considered as Error.
+set_msg_config -id {Synth 8-327} -new_severity {ERROR}
+
 # create impl_1 run ###########################################################
 if {[string equal [get_runs -quiet impl_1] ""]} {
   create_run -name impl_1 -part $part -flow {Vivado Implementation 2023} -strategy "Vivado Implementation Defaults" -constrset constrs_1 -parent_run synth_1
