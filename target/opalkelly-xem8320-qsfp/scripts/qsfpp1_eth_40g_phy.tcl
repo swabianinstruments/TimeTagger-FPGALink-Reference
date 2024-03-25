@@ -1,6 +1,6 @@
 # Check the Vivado Version
 
-set scripts_vivado_version 2023.1
+set scripts_vivado_version 2023.2
 set current_vivado_version [version -short]
 
 if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
