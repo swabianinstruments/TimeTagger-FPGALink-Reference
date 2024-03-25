@@ -38,6 +38,7 @@ The Counter module is designed to measure the number of tags received in each ch
 For detailed information on the usage and configuration of the modules, refer to the their documentation:
 
 - [Histogram Module Documentation](histogram.md)
+- [Counter Module Documentation](counter.md)
 
 ## Getting started
 
