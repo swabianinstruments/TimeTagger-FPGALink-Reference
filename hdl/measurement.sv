@@ -55,8 +55,6 @@ module measurement #(
     output reg [5:0] led
 );
 
-    assign s_axis_tready = user_sample_inp_tready;
-
     /* The measurement module supplies tag times and their corresponding channels in
    an unpacked format. In case your modules receive data in a packed format, we also
    provide you with the packed tag times and channels.*/
@@ -76,6 +74,8 @@ module measurement #(
     // --------------------------------------------------- //
 
     logic user_sample_inp_tready;
+    assign s_axis_tready = user_sample_inp_tready;
+
     user_sample #(
         .WORD_WIDTH(WORD_WIDTH)
     ) user_design (
