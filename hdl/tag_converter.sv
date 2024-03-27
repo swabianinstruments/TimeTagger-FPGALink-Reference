@@ -46,19 +46,14 @@ module si_tag_converter #(
     input  wire [KEEP_WIDTH_IN-1:0] s_axis_tkeep,
     input  wire [           32-1:0] s_axis_tuser,   // Rollover time
 
-    output wire                             m_axis_tvalid,
-    input  wire                             m_axis_tready,
-    output reg        [             64-1:0] m_axis_tagtime[NUMBER_OF_WORDS-1:0],
-    // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
-    output reg signed [                5:0] m_axis_channel[NUMBER_OF_WORDS-1:0],
-    output reg        [NUMBER_OF_WORDS-1:0] m_axis_tkeep,
-
-    // Output of the lowest expected time for the next channels, to be able
-    // to know that in certain time frame events *didn't* occur. Same format as tagtime
-    output reg [64-1:0] lowest_time_bound
+    axis_tag_interface.master m_axis
 );
 
-    assign s_axis_tready = m_axis_tready || !m_axis_tvalid;
+    initial
+        assert (m_axis.WORD_WIDTH == NUMBER_OF_WORDS)
+        else $error("WIDTH does not match AXI-S bus.");
+
+    assign s_axis_tready = m_axis.tready || !m_axis.tvalid;
 
     // Handle a further rollover of t_axis_tuser (rollover_time), should happen roughly every 6.5 hours
     reg [31:0] extended_rollover_time = 0;
@@ -71,7 +66,7 @@ module si_tag_converter #(
         if (rst == 1) begin
             extended_rollover_time <= 0;
             s_axis_tuser_p <= 0;
-            lowest_time_bound <= 0;
+            m_axis.lowest_time_bound <= 0;
             lowest_time_bound_p1 <= 0;
             lowest_time_bound_p2 <= 0;
             lowest_time_bound_p3 <= 0;
@@ -90,14 +85,14 @@ module si_tag_converter #(
             lowest_time_bound_p2 <= lowest_time_bound_p1;
             lowest_time_bound_p3 <= lowest_time_bound_p2;
 
-            if ($signed(lowest_time_bound_p3 - lowest_time_bound) > 0) begin
-                lowest_time_bound <= lowest_time_bound_p3;
+            if ($signed(lowest_time_bound_p3 - m_axis.lowest_time_bound) > 0) begin
+                m_axis.lowest_time_bound <= lowest_time_bound_p3;
             end
             for (int i = 0; i < NUMBER_OF_WORDS; i += 1) begin
-                if (m_axis_tkeep[i]) begin
-                    // The tagtime is always equal or higher than lowest_time_bound_p3 and lowest_time_bound
+                if (m_axis.tkeep[i]) begin
+                    // The tagtime is always equal or higher than lowest_time_bound_p3 and m_axis.lowest_time_bound
                     // as it's sorted
-                    lowest_time_bound <= m_axis_tagtime[i];
+                    m_axis.lowest_time_bound <= m_axis.tagtime[i];
                 end
             end
         end
@@ -123,9 +118,9 @@ module si_tag_converter #(
                     event_type <= 0;
                     channel_number <= 'X;
 
-                    m_axis_tagtime[i] <= 'X;
-                    m_axis_tkeep[i] <= 0;
-                    m_axis_channel[i] <= 'X;
+                    m_axis.tagtime[i] <= 'X;
+                    m_axis.tkeep[i] <= 0;
+                    m_axis.channel[i] <= 'X;
                 end else if (s_axis_tready) begin
                     // Clear data if it's invalid
                     tdata_p <= (s_axis_tvalid & (s_axis_tkeep[4*i+:4] == 4'hF)) ? s_axis_tdata[32*i+:32] : 0;
@@ -136,17 +131,19 @@ module si_tag_converter #(
                     event_type <= tdata_p[31:30];
                     channel_number <= tdata_p[29:24];
 
-                    m_axis_tagtime[i] <= tagtime_p + subtime;
-                    m_axis_tkeep[i] <= (event_type == 2'b01) && (channel_number < (2 * CHANNEL_COUNT));
+                    m_axis.tagtime[i] <= tagtime_p + subtime;
+                    m_axis.tkeep[i] <= (event_type == 2'b01) && (channel_number < (2 * CHANNEL_COUNT));
                     if (channel_number < CHANNEL_COUNT) begin
-                        m_axis_channel[i] <= channel_number + 1;
+                        m_axis.channel[i] <= channel_number + 1;
                     end else begin
-                        m_axis_channel[i] <= CHANNEL_COUNT - 1 - channel_number;
+                        m_axis.channel[i] <= CHANNEL_COUNT - 1 - channel_number;
                     end
 
                 end
             end
         end
     endgenerate
-    assign m_axis_tvalid = |m_axis_tkeep;
+    assign m_axis.tvalid = |m_axis.tkeep;
+    assign m_axis.clk    = clk;
+    assign m_axis.rst    = rst;
 endmodule

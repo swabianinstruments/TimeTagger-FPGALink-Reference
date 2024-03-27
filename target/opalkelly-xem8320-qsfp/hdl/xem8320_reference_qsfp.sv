@@ -463,17 +463,10 @@ module xem8320_reference_qsfp #(
     // ----------- GENERATING 64 BIT TIMESTAMPS ---------- //
     // --------------------------------------------------- //
 
-    wire signed [                5:0] measurement_inp_channel       [TC_WORD_WIDTH-1 : 0];
-    wire        [               63:0] measurement_inp_tagtime       [TC_WORD_WIDTH-1 : 0];
-    wire        [               63:0] measurement_lowest_time_bound;
-
-    wire        [TC_WORD_WIDTH-1 : 0] measurement_inp_tkeep;
-    wire                              measurement_inp_tready;
-    wire                              measurement_inp_tvalid;
-
     /* The si_tag_converter is tasked with decoding the 32-bit input data into real timestamps.
    These timestamps are represented as 64 bits, and the resolution is 1/3 picoseconds.
    */
+    axis_tag_interface #(.WORD_WIDTH(TC_WORD_WIDTH)) measurement_inp ();
     si_tag_converter #(
         .DATA_WIDTH_IN(TC_DATA_WIDTH)
     ) converter (
@@ -486,12 +479,7 @@ module xem8320_reference_qsfp #(
         .s_axis_tkeep(tag_stream_tkeep),
         .s_axis_tuser(tag_stream_tuser),
 
-        .m_axis_tvalid(measurement_inp_tvalid),
-        .m_axis_tready(measurement_inp_tready),
-        .m_axis_tkeep(measurement_inp_tkeep),
-        .m_axis_tagtime(measurement_inp_tagtime),
-        .m_axis_channel(measurement_inp_channel),
-        .lowest_time_bound(measurement_lowest_time_bound)
+        .m_axis(measurement_inp)
     );
 
     // --------------------------------------------------- //
@@ -504,18 +492,8 @@ module xem8320_reference_qsfp #(
       To achieve this, ensure that you handle all necessary Wishbone interfaces for
       your modules.
     */
-    measurement #(
-        .WORD_WIDTH(TC_WORD_WIDTH)
-    ) measurement_core (
-        .clk(sys_clk),
-        .rst(sys_clk_rst),
-
-        .s_axis_tvalid(measurement_inp_tvalid),
-        .s_axis_tready(measurement_inp_tready),
-        .s_axis_tkeep(measurement_inp_tkeep),
-        .s_axis_channel(measurement_inp_channel),
-        .s_axis_tagtime(measurement_inp_tagtime),
-        .lowest_time_bound(measurement_lowest_time_bound),
+    measurement measurement_core (
+        .s_axis(measurement_inp),
 
         .wb_user_sample(wb_array[user_sample]),  // wb interface for user_sample module
         .wb_histogram(wb_array[histogram]),  // wb interface for histogram module
