@@ -37,6 +37,20 @@ module measurement (
     output reg [5:0] led
 );
 
+    // Distribute the AXI bus to all measurements
+    axis_tag_interface #(
+        .WORD_WIDTH(s_axis.WORD_WIDTH),
+        .TIME_WIDTH(s_axis.TIME_WIDTH),
+        .CHANNEL_WIDTH(s_axis.CHANNEL_WIDTH)
+    )
+        m_axis_user_sample (), m_axis_histogram (), m_axis_counter ();
+    axis_broadcast #(
+        .FANOUT(3)
+    ) axis_broadcast_inst (
+        .s_axis(s_axis),
+        .m_axis({m_axis_user_sample, m_axis_histogram, m_axis_counter})
+    );
+
     /* The measurement module supplies tag times and their corresponding channels in
    an unpacked format. In case your modules receive data in a packed format, we also
    provide you with the packed tag times and channels.*/
@@ -58,20 +72,17 @@ module measurement (
     // ------------------- User_sample ------------------- //
     // --------------------------------------------------- //
 
-    logic user_sample_inp_tready;
-    assign s_axis.tready = user_sample_inp_tready;
-
     user_sample #(
-        .WORD_WIDTH(s_axis.WORD_WIDTH)
+        .WORD_WIDTH(m_axis_user_sample.WORD_WIDTH)
     ) user_design (
-        .clk(s_axis.clk),
-        .rst(s_axis.rst),
+        .clk(m_axis_user_sample.clk),
+        .rst(m_axis_user_sample.rst),
 
-        .s_axis_tvalid (s_axis.tvalid),
-        .s_axis_tready (user_sample_inp_tready),
-        .s_axis_tkeep  (s_axis.tkeep),
-        .s_axis_channel(s_axis.channel),
-        .s_axis_tagtime(s_axis.tagtime),
+        .s_axis_tvalid (m_axis_user_sample.tvalid),
+        .s_axis_tready (m_axis_user_sample.tready),
+        .s_axis_tkeep  (m_axis_user_sample.tkeep),
+        .s_axis_channel(m_axis_user_sample.channel),
+        .s_axis_tagtime(m_axis_user_sample.tagtime),
 
         .wb(wb_user_sample),
 
@@ -84,13 +95,14 @@ module measurement (
 
     histogram_wrapper #(
         .WISHBONE_INTERFACE_EN(1),
-        .NUM_OF_TAGS(s_axis.WORD_WIDTH)
+        .NUM_OF_TAGS(m_axis_histogram.WORD_WIDTH)
     ) histogram_wrapper_inst (
-        .clk(s_axis.clk),
-        .rst(s_axis.rst),
+        .clk(m_axis_histogram.clk),
+        .rst(m_axis_histogram.rst),
         .tagtime(s_axis_tagtime_packed),
         .channel(s_axis_channel_packed),
-        .valid_tag(s_axis.tkeep),
+        .valid_tag(m_axis_histogram.tvalid ? m_axis_histogram.tkeep : '0),
+        .tready(m_axis_histogram.tready),
 
         .wb(wb_histogram),
 
@@ -119,14 +131,15 @@ module measurement (
      channel continuously. */
     counter_wrapper #(
         .WISHBONE_INTERFACE_EN(1),
-        .NUM_OF_TAGS(s_axis.WORD_WIDTH)
+        .NUM_OF_TAGS(m_axis_counter.WORD_WIDTH)
     ) counter_wrapper_inst (
-        .clk(s_axis.clk),
-        .rst(s_axis.rst),
+        .clk(m_axis_counter.clk),
+        .rst(m_axis_counter.rst),
         .tagtime(s_axis_tagtime_packed),
-        .lowest_time_bound(s_axis.lowest_time_bound),
+        .lowest_time_bound(m_axis_counter.lowest_time_bound),
         .channel(s_axis_channel_packed),
-        .valid_tag(s_axis.tkeep),
+        .valid_tag(m_axis_counter.tvalid ? m_axis_counter.tkeep : '0),
+        .tready(m_axis_counter.tready),
         .wb(wb_counter),
         /*If you intend to process counter data within the FPGA , set "WISHBONE_INTERFACE_EN"
      to zero. Utilize the signals below to interface with this module.*/

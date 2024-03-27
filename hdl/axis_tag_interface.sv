@@ -46,3 +46,47 @@ interface axis_tag_interface #(
     modport master(input tready, output clk, rst, tvalid, tagtime, channel, tkeep, lowest_time_bound);
     modport slave(input clk, rst, tvalid, tagtime, channel, tkeep, lowest_time_bound, output tready);
 endinterface
+
+// Broadcast module
+// Optimized for low resources, asserts tready if all clients have processed the last word
+module axis_broadcast #(
+    parameter integer FANOUT = 1
+) (
+    axis_tag_interface.slave  s_axis,
+    axis_tag_interface.master m_axis[FANOUT]
+);
+    logic [FANOUT-1 : 0] consumed;
+    logic [FANOUT-1 : 0] tready;
+
+    assign s_axis.tready = &(consumed | tready);
+
+    always_ff @(posedge s_axis.clk) begin
+        if (s_axis.rst || s_axis.tready) begin
+            consumed <= 0;
+        end else begin
+            consumed <= consumed | tready;
+        end
+    end
+
+    generate
+        for (genvar i = 0; i < FANOUT; i++) begin
+            initial begin
+                assert (m_axis[i].WORD_WIDTH == s_axis.WORD_WIDTH)
+                else $error("WORD_WIDTH mismatch.");
+                assert (m_axis[i].TIME_WIDTH == s_axis.TIME_WIDTH)
+                else $error("TIME_WIDTH mismatch.");
+                assert (m_axis[i].CHANNEL_WIDTH == s_axis.CHANNEL_WIDTH)
+                else $error("CHANNEL_WIDTH mismatch.");
+            end
+
+            assign m_axis[i].clk = s_axis.clk;
+            assign m_axis[i].rst = s_axis.rst;
+            assign m_axis[i].tagtime = s_axis.tagtime;
+            assign m_axis[i].channel = s_axis.channel;
+            assign m_axis[i].tkeep = s_axis.tkeep;
+            assign m_axis[i].lowest_time_bound = s_axis.lowest_time_bound;
+            assign m_axis[i].tvalid = s_axis.tvalid && !consumed[i];
+            assign tready[i] = m_axis[i].tready;
+        end
+    endgenerate
+endmodule

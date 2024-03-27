@@ -70,11 +70,12 @@ module histogram_wrapper #(
     parameter ENABLE_INPUT_REGISTERS = 1,
     parameter VARIANCE_WIDTH = 32
 ) (
-    input wire clk,
-    input wire rst,
-    input wire [TOT_TAGS_WIDTH - 1 : 0] tagtime,
-    input wire [TOT_CHANNELS_WIDTH - 1 : 0] channel,
-    input wire [NUM_OF_TAGS - 1 : 0] valid_tag,
+    input  wire                              clk,
+    input  wire                              rst,
+    input  wire [    TOT_TAGS_WIDTH - 1 : 0] tagtime,
+    input  wire [TOT_CHANNELS_WIDTH - 1 : 0] channel,
+    input  wire [       NUM_OF_TAGS - 1 : 0] valid_tag,
+    output reg                               tready = 1,
 
     //    Wishbone interface for control & status      		//
     wb_interface.slave wb,

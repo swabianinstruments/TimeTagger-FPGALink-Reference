@@ -42,10 +42,11 @@ module counter_wrapper #(
     input wire clk,
     input wire rst,
 
-    input wire [       NUM_OF_TAGS - 1 : 0] valid_tag,
-    input wire [         TAG_WIDTH - 1 : 0] lowest_time_bound,
-    input wire [    TOT_TAGS_WIDTH - 1 : 0] tagtime,
-    input wire [TOT_CHANNELS_WIDTH - 1 : 0] channel,
+    input  wire [       NUM_OF_TAGS - 1 : 0] valid_tag,
+    output reg                               tready = 1,
+    input  wire [         TAG_WIDTH - 1 : 0] lowest_time_bound,
+    input  wire [    TOT_TAGS_WIDTH - 1 : 0] tagtime,
+    input  wire [TOT_CHANNELS_WIDTH - 1 : 0] channel,
 
     //    Wishbone interface for control & status      		//
     wb_interface.slave wb,
