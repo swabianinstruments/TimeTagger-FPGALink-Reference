@@ -39,6 +39,7 @@ set files [list \
  "[file normalize "$frontpanel_dir/okWireOut.v"]"\
  "[file normalize "$target_dir/hdl/xem8320_reference.sv"]"\
  "[file normalize "$target_dir/hdl/sfpp1_eth_10g_axis.sv"]"\
+ "[file normalize "$origin_dir/hdl/axis_tag_interface.sv"]"\
  "[file normalize "$origin_dir/hdl/eth_axis_fcs_checker_128b.sv"]"\
  "[file normalize "$origin_dir/hdl/wb_master.sv"]"\
  "[file normalize "$origin_dir/hdl/xgmii_axis_bridge.sv"]"\

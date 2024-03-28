@@ -23,29 +23,16 @@
 
 module counter_wrapper #(
     parameter WISHBONE_INTERFACE_EN = 1,
-    parameter TAG_WIDTH = 64,
-    parameter NUM_OF_TAGS = 4,
-    parameter TOT_TAGS_WIDTH = NUM_OF_TAGS * TAG_WIDTH,
+    parameter WINDOW_WIDTH = 64,
     parameter CHANNEL_WIDTH = 6,
-    parameter TOT_CHANNELS_WIDTH = NUM_OF_TAGS * CHANNEL_WIDTH,
-    parameter WINDOW_WIDTH = TAG_WIDTH,
     parameter NUM_OF_CHANNELS = 16,
     parameter COUNTER_WIDTH = 32,
     parameter INPUT_FIFO_DEPTH = 1024,
     parameter OUTPUT_FIFO_DEPTH = 8 * 1024,
     parameter CHANNEL_LUT_DEPTH = 2 ** CHANNEL_WIDTH
 ) (
-    /* All inputs and outputs are synchronized into the clk. if some controlling
-    signals are generated in different clock domains, cdc should be used
-    for synchronization outside of this module.
-    */
-    input wire clk,
-    input wire rst,
 
-    input wire [       NUM_OF_TAGS - 1 : 0] valid_tag,
-    input wire [         TAG_WIDTH - 1 : 0] lowest_time_bound,
-    input wire [    TOT_TAGS_WIDTH - 1 : 0] tagtime,
-    input wire [TOT_CHANNELS_WIDTH - 1 : 0] channel,
+    axis_tag_interface.slave s_axis,
 
     //    Wishbone interface for control & status      		//
     wb_interface.slave wb,
@@ -61,22 +48,42 @@ module counter_wrapper #(
 
 );
 
+    assign s_axis.tready = 1;
+
+    localparam integer WORD_WIDTH = s_axis.WORD_WIDTH;
+    localparam integer TIME_WIDTH = s_axis.TIME_WIDTH;
+    localparam integer TOT_TAGS_WIDTH = WORD_WIDTH * TIME_WIDTH;
+    localparam integer TOT_CHANNELS_WIDTH = WORD_WIDTH * CHANNEL_WIDTH;
+
+    logic [WORD_WIDTH - 1 : 0] valid_tag;
+    assign valid_tag = s_axis.tvalid ? s_axis.tkeep : 0;
+
+    logic [TOT_TAGS_WIDTH-1:0] tagtime;
+    logic [TOT_CHANNELS_WIDTH-1:0] channel;
+
+    always_comb begin
+        for (int i = 0; i < WORD_WIDTH; i++) begin
+            tagtime[i*TIME_WIDTH+:TIME_WIDTH] <= s_axis.tagtime[i];
+            channel[i*CHANNEL_WIDTH+:CHANNEL_WIDTH] <= s_axis.channel[i];
+        end
+    end
+
     //--------------------Channels LUT ---------------------------------//
     logic [CHANNEL_WIDTH - 1 : 0] channel_lut[CHANNEL_LUT_DEPTH] = '{default: '0};
 
     // register input signals
-    logic [NUM_OF_TAGS - 1 : 0] valid_tag_inp;
+    logic [WORD_WIDTH - 1 : 0] valid_tag_inp;
     logic [TOT_TAGS_WIDTH - 1 : 0] tagtime_inp;
     logic [TOT_CHANNELS_WIDTH - 1 : 0] channel_inp;
-    logic [TAG_WIDTH - 1 : 0] r1lowest_time_bound;
+    logic [TIME_WIDTH - 1 : 0] r1lowest_time_bound;
 
     // channel mapping
-    always_ff @(posedge clk) begin
+    always_ff @(posedge s_axis.clk) begin
         valid_tag_inp <= valid_tag;
         tagtime_inp <= tagtime;
-        r1lowest_time_bound <= lowest_time_bound;
+        r1lowest_time_bound <= s_axis.lowest_time_bound;
 
-        for (int i = 0; i < NUM_OF_TAGS; i++) begin
+        for (int i = 0; i < WORD_WIDTH; i++) begin
             channel_inp[i*CHANNEL_WIDTH+:CHANNEL_WIDTH] <= channel_lut[channel[i*CHANNEL_WIDTH+:CHANNEL_WIDTH]];
         end
 
@@ -85,9 +92,9 @@ module counter_wrapper #(
         becomes valuable. To address this, we designate it as data for the first lane, assigning it a channel number
         outside the supported range of [0, NUM_OF_CHANNELS). Consequently, the countrate module can update the time
         and window information even when none of the channel information is being updated.*/
-        if (lowest_time_bound != r1lowest_time_bound && (valid_tag | valid_tag_inp) == 0) begin
+        if (s_axis.lowest_time_bound != r1lowest_time_bound && (valid_tag | valid_tag_inp) == 0) begin
             valid_tag_inp[0] <= 1;
-            tagtime_inp[TAG_WIDTH-1 : 0] <= lowest_time_bound;
+            tagtime_inp[TIME_WIDTH-1 : 0] <= s_axis.lowest_time_bound;
             channel_inp[CHANNEL_WIDTH-1 : 0] <= NUM_OF_CHANNELS;
 
         end
@@ -100,16 +107,16 @@ module counter_wrapper #(
     logic count_valid;
     logic reset_module;
     countrate #(
-        .TAG_WIDTH(TAG_WIDTH),
-        .NUM_OF_TAGS(NUM_OF_TAGS),
+        .TAG_WIDTH(TIME_WIDTH),
+        .NUM_OF_TAGS(WORD_WIDTH),
         .CHANNEL_WIDTH(CHANNEL_WIDTH),
         .WINDOW_WIDTH(WINDOW_WIDTH),
         .NUM_OF_CHANNELS(NUM_OF_CHANNELS),
         .COUNTER_WIDTH(COUNTER_WIDTH),
         .INPUT_FIFO_DEPTH(INPUT_FIFO_DEPTH)
     ) countrate_inst (
-        .clk(clk),
-        .rst(rst | reset_module),
+        .clk(s_axis.clk),
+        .rst(s_axis.rst | reset_module),
         .valid_tag(valid_tag_inp),
         .tagtime(tagtime_inp),
         .channel(channel_inp),
@@ -139,10 +146,10 @@ module counter_wrapper #(
             logic [CHANNEL_WIDTH - 1 : 0] fifo_cnt;
             logic [CHANNEL_WIDTH - 1 : 0] num_desired_channels;
 
-            always @(posedge clk) begin
+            always @(posedge s_axis.clk) begin
                 fifo_cnt   <= 0;
                 fifo_wt_en <= 0;
-                if (!(rst | reset_module) && (count_valid | fifo_wt_en)) begin
+                if (!(s_axis.rst | reset_module) && (count_valid | fifo_wt_en)) begin
                     if (fifo_cnt <= num_desired_channels - 1) begin
                         fifo_wt_en <= 1;
                     end
@@ -164,8 +171,8 @@ module counter_wrapper #(
                 .READ_MODE("fwft"),
                 .USE_ADV_FEATURES("0707")
             ) output_buffer (
-                .rst(rst | reset_module),  // Discard FIFO data when the reset_module signal is asserted
-                .wr_clk(clk),
+                .rst(s_axis.rst | reset_module),  // Discard FIFO data when the reset_module signal is asserted
+                .wr_clk(s_axis.clk),
                 .wr_en(fifo_wt_en),
                 .din(serialized_count_data),
                 .prog_full(fifo_prog_full),
@@ -195,7 +202,7 @@ module counter_wrapper #(
             logic [CHANNEL_WIDTH - 1 : 0] lut_cnt_readout = 0;
             logic update_lut;
 
-            always @(posedge clk) begin
+            always @(posedge wb.clk) begin
                 wb.ack <= 0;
                 wb.dat_o <= 'X;
                 start_counting <= 0;
@@ -218,7 +225,7 @@ module counter_wrapper #(
                     lut_cnt_readout <= 0;
                 end
 
-                if (rst || wb.rst) begin
+                if (s_axis.rst || wb.rst) begin
                     r0window_size <= 64'h00000000B2D05E00;  // 1ms
                     num_desired_channels <= NUM_OF_CHANNELS;
                 end else begin
@@ -328,7 +335,7 @@ module counter_wrapper #(
                     end
                 end
 
-                if (rst || reset_module || wb.rst) begin
+                if (s_axis.rst || reset_module || wb.rst) begin
                     discard_enable <= 0;
                     discard_flag <= 0;
                     discard_cnt <= 0;
@@ -348,7 +355,7 @@ module counter_wrapper #(
             assign count_valid_o = count_valid;
             assign count_data_o = count_data;
 
-            always_ff @(posedge clk) begin
+            always_ff @(posedge s_axis.clk) begin
                 channel_lut <= channel_lut_i;
             end
         end

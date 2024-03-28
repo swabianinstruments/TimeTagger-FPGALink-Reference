@@ -48,36 +48,24 @@
 // |      32 | failed_time         | The failing time. The upper bit is set if the value is valid (64 bit)                 |
 //
 // Note: You can replicate much of this functionality with the Vivado ILA and adding multiple ANDed triggers with comparators
-module user_sample #(
-    parameter WORD_WIDTH = 4
-) (
-    input wire clk,
-    input wire rst,
-
-    // 1 if the word is valid and tkeep needs to be checked, 0 if the full word is invalid
-    input  wire                         s_axis_tvalid,
-    // 1 if this module is able to accept new data in this clock period. Must always be 1
-    output wire                         s_axis_tready,
-    // The time the tag was captured at in 1/3 ps since the startup of the TTX
-    input  wire        [        64-1:0] s_axis_tagtime[WORD_WIDTH-1:0],
-    // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
-    input  wire signed [           5:0] s_axis_channel[WORD_WIDTH-1:0],
-    // 1 for a valid event, 0 for no event
-    input  wire        [WORD_WIDTH-1:0] s_axis_tkeep,
+module user_sample (
+    axis_tag_interface.slave s_axis,
 
     wb_interface.slave wb,
 
     output reg [5:0] led
 );
 
+    localparam WORD_WIDTH = s_axis.WORD_WIDTH;
+
     // This module is always ready to accept new data
-    assign s_axis_tready = 1;
+    assign s_axis.tready = 1;
 
     reg [                    31:0] cnt;
     reg [                    15:0] tag_counter;
     reg [$clog2(WORD_WIDTH+1)-1:0] tag_counter_inc;
-    always @(posedge clk) begin
-        if (rst) begin
+    always @(posedge s_axis.clk) begin
+        if (s_axis.rst) begin
             led[4:0] <= 0;
             cnt <= 0;
             tag_counter <= 0;
@@ -85,13 +73,13 @@ module user_sample #(
         end else begin
             tag_counter_inc = 0;
             for (int i = 0; i < WORD_WIDTH; i += 1) begin
-                if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i]) begin
-                    unique case (s_axis_channel[i])
+                if (s_axis.tready && s_axis.tvalid && s_axis.tkeep[i]) begin
+                    unique case (s_axis.channel[i])
                         5'h01: begin
-                            led[0] <= !s_axis_channel[i][5];
+                            led[0] <= !s_axis.channel[i][5];
                         end
                         5'h02: begin
-                            led[1] <= !s_axis_channel[i][5];
+                            led[1] <= !s_axis.channel[i][5];
                         end
                         default: ;
                     endcase
@@ -129,8 +117,8 @@ module user_sample #(
     reg        tagtime_diff_valid          [WORD_WIDTH-1:0];
     reg [63:0] tagtime_diff_p              [WORD_WIDTH-1:0];
     reg        tagtime_diff_p_error        [WORD_WIDTH-1:0];
-    always @(posedge clk) begin
-        if (rst || (user_control != 0)) begin
+    always @(posedge s_axis.clk) begin
+        if (s_axis.rst || (user_control != 0)) begin
             led[5] <= 1'b0;
             failed <= 64'h0;
             prev_tagtime_blocking = 'x;
@@ -151,16 +139,16 @@ module user_sample #(
             for (int i = 0; i < WORD_WIDTH; i += 1) begin
                 /*
                // reference implementation without pipeline stages
-               if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i] && channel_select == s_axis_channel[i]) begin
+               if (s_axis.tready && s_axis.tvalid && s_axis.tkeep[i] && channel_select == s_axis.channel[i]) begin
                     if (prev_tagtime_valid_blocking) begin
-                         tagtime_diff[i] = s_axis_tagtime[i] - prev_tagtime_blocking;
+                         tagtime_diff[i] = s_axis.tagtime[i] - prev_tagtime_blocking;
                          if (tagtime_diff[i] < lower_bound || tagtime_diff[i] > upper_bound) begin
                               failed <= tagtime_diff[i];
                               failed[63] <= 1;
                               led[5] <= 1'b1;
                          end
                     end
-                    prev_tagtime_blocking = s_axis_tagtime[i];
+                    prev_tagtime_blocking = s_axis.tagtime[i];
                     prev_tagtime_valid_blocking = 1;
                end
                */
@@ -168,8 +156,8 @@ module user_sample #(
                 // First pipeline stage (full parallel): Select if this lane is active
                 tagtimes[i] <= 'x;
                 tagtimes_valid[i] <= 0;
-                if (s_axis_tready && s_axis_tvalid && s_axis_tkeep[i] && channel_select == s_axis_channel[i]) begin
-                    tagtimes[i] <= s_axis_tagtime[i];
+                if (s_axis.tready && s_axis.tvalid && s_axis.tkeep[i] && channel_select == s_axis.channel[i]) begin
+                    tagtimes[i] <= s_axis.tagtime[i];
                     tagtimes_valid[i] <= 1;
                 end
 
@@ -203,9 +191,9 @@ module user_sample #(
         end
     end
 
-    always @(posedge clk) begin
+    always @(posedge wb.clk) begin
         wb.ack <= 0;
-        if (rst) begin
+        if (wb.rst) begin
             wb.dat_o <= 0;
             user_control <= 0;
             channel_select <= 1;

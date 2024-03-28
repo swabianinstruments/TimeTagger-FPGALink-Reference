@@ -58,23 +58,15 @@ module will be supplied with the following statistics:
 
 module histogram_wrapper #(
     parameter WISHBONE_INTERFACE_EN = 1,
-    parameter TAG_WIDTH = 64,
-    parameter SHIFT_WIDTH = $clog2(TAG_WIDTH),
-    parameter NUM_OF_TAGS = 4,
-    parameter TOT_TAGS_WIDTH = NUM_OF_TAGS * TAG_WIDTH,
-    parameter CHANNEL_WIDTH = 6,
-    parameter TOT_CHANNELS_WIDTH = NUM_OF_TAGS * CHANNEL_WIDTH,
     parameter HIST_MEM_DEPTH = 4096,
+    parameter CHANNEL_WIDTH = 6,
+    parameter SHIFT_WIDTH = 6,
     parameter HIST_WORD_SIZE = 32,
     parameter HIST_MEM_ADDR_WIDTH = $clog2(HIST_MEM_DEPTH),
     parameter ENABLE_INPUT_REGISTERS = 1,
     parameter VARIANCE_WIDTH = 32
 ) (
-    input wire clk,
-    input wire rst,
-    input wire [TOT_TAGS_WIDTH - 1 : 0] tagtime,
-    input wire [TOT_CHANNELS_WIDTH - 1 : 0] channel,
-    input wire [NUM_OF_TAGS - 1 : 0] valid_tag,
+    axis_tag_interface.slave s_axis,
 
     //    Wishbone interface for control & status      		//
     wb_interface.slave wb,
@@ -101,6 +93,23 @@ module histogram_wrapper #(
 
 );
 
+    assign s_axis.tready = 1;
+
+    localparam integer WORD_WIDTH = s_axis.WORD_WIDTH;
+    localparam integer TIME_WIDTH = s_axis.TIME_WIDTH;
+    localparam integer TOT_TAGS_WIDTH = WORD_WIDTH * TIME_WIDTH;
+    localparam integer TOT_CHANNELS_WIDTH = WORD_WIDTH * CHANNEL_WIDTH;
+
+    logic [TOT_TAGS_WIDTH-1:0] tagtime;
+    logic [TOT_CHANNELS_WIDTH-1:0] channel;
+
+    always_comb begin
+        for (int i = 0; i < WORD_WIDTH; i++) begin
+            tagtime[i*TIME_WIDTH+:TIME_WIDTH] <= s_axis.tagtime[i];
+            channel[i*CHANNEL_WIDTH+:CHANNEL_WIDTH] <= s_axis.channel[i];
+        end
+    end
+
     //------------------------------------------------------------------//
     // histogram module
 
@@ -117,9 +126,9 @@ module histogram_wrapper #(
     logic last_sample;
 
     histogram #(
-        .TAG_WIDTH(TAG_WIDTH),
+        .TAG_WIDTH(TIME_WIDTH),
         .SHIFT_WIDTH(SHIFT_WIDTH),
-        .NUM_OF_TAGS(NUM_OF_TAGS),
+        .NUM_OF_TAGS(WORD_WIDTH),
         .TOT_TAGS_WIDTH(TOT_TAGS_WIDTH),
         .CHANNEL_WIDTH(CHANNEL_WIDTH),
         .TOT_CHANNELS_WIDTH(TOT_CHANNELS_WIDTH),
@@ -128,11 +137,11 @@ module histogram_wrapper #(
         .HIST_MEM_ADDR_WIDTH(HIST_MEM_ADDR_WIDTH),
         .ENABLE_INPUT_REGISTERS(ENABLE_INPUT_REGISTERS)
     ) histogram_inst (
-        .clk(clk),
+        .clk(s_axis.clk),
         .rst(reset_hist_module),
         .tagtime(tagtime),
         .channel(channel),
-        .valid_tag(valid_tag),
+        .valid_tag(s_axis.tvalid ? s_axis.tkeep : 0),
         .hist_read_start(hist_read_start),
         .hist_reset(hist_reset),
         .config_en(config_en),
@@ -161,7 +170,7 @@ module histogram_wrapper #(
             assign click_channel = config_data[CHANNEL_WIDTH+:CHANNEL_WIDTH];
             assign shift_val     = config_data[2*CHANNEL_WIDTH+:SHIFT_WIDTH];
 
-            always @(posedge clk) begin
+            always @(posedge wb.clk) begin
                 wb.ack <= 0;
                 wb.dat_o <= 'X;
                 config_en <= 0;
@@ -175,7 +184,7 @@ module histogram_wrapper #(
                     hist_is_running <= 0;
                 end
 
-                if (rst) begin
+                if (wb.rst) begin
                     wb.dat_o <= 0;
                     config_data <= 'X;
                 end else if (wb.cyc && !wb.ack) begin
@@ -245,8 +254,8 @@ module histogram_wrapper #(
                 .FULL_RESET_VALUE(1),
                 .USE_ADV_FEATURES("0707")
             ) output_buffer (
-                .rst(rst | reset_hist_module),
-                .wr_clk(clk),
+                .rst(s_axis.rst | reset_hist_module),
+                .wr_clk(s_axis.clk),
                 .wr_en(hist_valid_out),
                 .din(hist_data_out),
                 .prog_full(fifo_prog_full),
@@ -300,7 +309,7 @@ module histogram_wrapper #(
             logic enb;
             logic [BRAM_DATA_WIDTH - 1 : 0] doutb;
 
-            always @(posedge clk) begin
+            always @(posedge s_axis.clk) begin
                 if (wea) BRAM[addra] <= dina;
                 if (enb) ram_data <= BRAM[addrb];
 
@@ -312,7 +321,7 @@ module histogram_wrapper #(
             logic [31 : 0] valid_delay = 0;
             logic [HIST_WORD_SIZE -1 : 0] r1hist_data_out, r2hist_data_out, r3hist_data_out;
             logic BRAM_rst;
-            always @(posedge clk) begin
+            always @(posedge s_axis.clk) begin
                 // Delay the input data to align it with the BRAM output
                 r1hist_data_out <= hist_data_out;
                 r2hist_data_out <= r1hist_data_out;
@@ -419,7 +428,7 @@ module histogram_wrapper #(
             logic [SUM_WIDTH - 1 : 0] variance_reminder;
             logic variance_validout;
 
-            always @(posedge clk) begin
+            always @(posedge s_axis.clk) begin
                 // The index begins at 1 and extends up to HIST_MEM_ADDR_WIDTH.
                 // This ensures that the impact of the initial bin with an address
                 // of zero is preserved and not disregarded.
@@ -520,7 +529,7 @@ module histogram_wrapper #(
                 .INPUT2_WIDTH(BRAM_DATA_WIDTH),
                 .LATENCY(MULT1_LATENCY)
             ) wide_mult_inst1 (
-                .clk(clk),
+                .clk(s_axis.clk),
                 .din1(r2index),  // n
                 .din2(data_value),  // x(n)
                 .dout(wide_mult1)  // n*x(n)
@@ -531,7 +540,7 @@ module histogram_wrapper #(
                 .INPUT2_WIDTH(BRAM_DATA_WIDTH),
                 .LATENCY(MULT2_LATENCY)
             ) wide_mult_inst2 (
-                .clk (clk),
+                .clk (s_axis.clk),
                 .din1 (squared_index), // n*n
                 .din2 (data_value),    // x(n)
                 .dout (wide_mult2)     // n*n*x(n)
@@ -541,7 +550,7 @@ module histogram_wrapper #(
                 .DIVIDENT_WIDTH(WEIGHTED_SUM_WIDTH),
                 .DIVISOR_WIDTH (SUM_WIDTH)
             ) calculating_offset (
-                .clk     (clk),
+                .clk     (s_axis.clk),
                 .start   (start_offset_div),
                 .dividend(weighted_sum_reg),  // ∑n*x(n)
                 .divisor (data_sum_reg),      // ∑x(n)
@@ -556,7 +565,7 @@ module histogram_wrapper #(
                 .INPUT2_WIDTH(SUM_WIDTH),
                 .LATENCY(MULT3_LATENCY)
             ) wide_mult_inst3 (
-                .clk (clk),
+                .clk (s_axis.clk),
                 .din1(squared_offset),  // offset*offset
                 .din2(data_sum_reg),    // ∑x(n)
                 .dout(wide_mult3)       // offset*offset*∑x(n)
@@ -568,7 +577,7 @@ module histogram_wrapper #(
                 .INPUT2_WIDTH(WEIGHTED_SUM_WIDTH),
                 .LATENCY(MULT4_LATENCY)
             ) wide_mult_inst4 (
-                .clk (clk),
+                .clk (s_axis.clk),
                 .din1(offset_reg),        // offset
                 .din2(weighted_sum_reg),  // ∑n*x(n)
                 .dout(wide_mult4)         // offset*∑n*x(n)
@@ -578,7 +587,7 @@ module histogram_wrapper #(
                 .DIVIDENT_WIDTH(SQUARED_WEIGHTED_SUM_WIDTH + 1),
                 .DIVISOR_WIDTH (SUM_WIDTH)
             ) calculating_variance (
-                .clk(clk),
+                .clk(s_axis.clk),
                 .start(offset_validout_buff[OFFSET_VALID_BUFF_WIDTH-1]),
                 .dividend(subtraction),  // (∑n*n*x(n) + N*offset*offset) - (offset*N*N + offset*N)
                 .divisor(data_sum_reg),  // ∑x(n)

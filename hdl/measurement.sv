@@ -21,26 +21,8 @@
  `default_nettype none
 // verilog_format: on
 
-module measurement #(
-    // WORD_WIDTH controls how many events are processed simultaneously
-    parameter WORD_WIDTH = 4
-) (
-    input wire clk,
-    input wire rst,
-
-    // 1 if the word is valid and tkeep needs to be checked, 0 if the full word is invalid
-    input  wire                         s_axis_tvalid,
-    // 1 if this module is able to accept new data in this clock period. Must always be 1
-    output wire                         s_axis_tready,
-    // The time the tag was captured at in 1/3 ps since the startup of the TTX
-    input  wire        [        64-1:0] s_axis_tagtime   [WORD_WIDTH-1:0],
-    // channel number: 1 to 18 for rising edge and -1 to -18 for falling edge
-    input  wire signed [           5:0] s_axis_channel   [WORD_WIDTH-1:0],
-    // Each bit in s_axis_tkeep represents the validity of an event:
-    // 1 for a valid event, 0 for no event in the corresponding bit position.
-    input  wire        [WORD_WIDTH-1:0] s_axis_tkeep,
-    input  wire        [        64-1:0] lowest_time_bound,
-
+module measurement (
+    axis_tag_interface.slave s_axis,
 
     wb_interface.slave wb_user_sample,
     wb_interface.slave wb_histogram,
@@ -55,41 +37,28 @@ module measurement #(
     output reg [5:0] led
 );
 
-    /* The measurement module supplies tag times and their corresponding channels in
-   an unpacked format. In case your modules receive data in a packed format, we also
-   provide you with the packed tag times and channels.*/
-    logic [64*WORD_WIDTH-1:0] s_axis_tagtime_packed;
-    logic [ 6*WORD_WIDTH-1:0] s_axis_channel_packed;
+    // Distribute the AXI bus to all measurements
+    axis_tag_interface #(
+        .WORD_WIDTH(s_axis.WORD_WIDTH),
+        .TIME_WIDTH(s_axis.TIME_WIDTH),
+        .CHANNEL_WIDTH(s_axis.CHANNEL_WIDTH)
+    )
+        m_axis_user_sample (), m_axis_histogram (), m_axis_counter ();
 
-    always_comb begin
-        for (int i = 0; i < WORD_WIDTH; i++) begin
-            s_axis_tagtime_packed[i*64+:64] <= s_axis_tagtime[i];
-            s_axis_channel_packed[i*6+:6]   <= s_axis_channel[i];
-        end
-    end
-
+    axis_broadcast #(
+        .FANOUT(3)
+    ) axis_broadcast_inst (
+        .s_axis(s_axis),
+        .m_axis({m_axis_user_sample, m_axis_histogram, m_axis_counter})
+    );
 
     // --------------------------------------------------- //
     // ------------------- User_sample ------------------- //
     // --------------------------------------------------- //
 
-    logic user_sample_inp_tready;
-    assign s_axis_tready = user_sample_inp_tready;
-
-    user_sample #(
-        .WORD_WIDTH(WORD_WIDTH)
-    ) user_design (
-        .clk(clk),
-        .rst(rst),
-
-        .s_axis_tvalid (s_axis_tvalid),
-        .s_axis_tready (user_sample_inp_tready),
-        .s_axis_tkeep  (s_axis_tkeep),
-        .s_axis_channel(s_axis_channel),
-        .s_axis_tagtime(s_axis_tagtime),
-
+    user_sample user_design (
+        .s_axis(m_axis_user_sample),
         .wb(wb_user_sample),
-
         .led(led)
     );
 
@@ -99,13 +68,10 @@ module measurement #(
 
     histogram_wrapper #(
         .WISHBONE_INTERFACE_EN(1),
-        .NUM_OF_TAGS(WORD_WIDTH)
+        .CHANNEL_WIDTH(m_axis_histogram.CHANNEL_WIDTH),
+        .SHIFT_WIDTH($clog2(m_axis_histogram.TIME_WIDTH))
     ) histogram_wrapper_inst (
-        .clk(clk),
-        .rst(rst),
-        .tagtime(s_axis_tagtime_packed),
-        .channel(s_axis_channel_packed),
-        .valid_tag(s_axis_tkeep),
+        .s_axis(m_axis_histogram),
 
         .wb(wb_histogram),
 
@@ -134,14 +100,11 @@ module measurement #(
      channel continuously. */
     counter_wrapper #(
         .WISHBONE_INTERFACE_EN(1),
-        .NUM_OF_TAGS(WORD_WIDTH)
+        .WINDOW_WIDTH(m_axis_counter.TIME_WIDTH),
+        .CHANNEL_WIDTH(m_axis_counter.CHANNEL_WIDTH)
     ) counter_wrapper_inst (
-        .clk(clk),
-        .rst(rst),
-        .tagtime(s_axis_tagtime_packed),
-        .lowest_time_bound(lowest_time_bound),
-        .channel(s_axis_channel_packed),
-        .valid_tag(s_axis_tkeep),
+        .s_axis(m_axis_counter),
+
         .wb(wb_counter),
         /*If you intend to process counter data within the FPGA , set "WISHBONE_INTERFACE_EN"
      to zero. Utilize the signals below to interface with this module.*/
