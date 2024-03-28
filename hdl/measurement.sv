@@ -52,23 +52,6 @@ module measurement (
         .m_axis({m_axis_user_sample, m_axis_histogram, m_axis_counter})
     );
 
-    /* The measurement module supplies tag times and their corresponding channels in
-   an unpacked format. In case your modules receive data in a packed format, we also
-   provide you with the packed tag times and channels.*/
-    localparam integer WORD_WIDTH = s_axis.WORD_WIDTH;
-    localparam integer TIME_WIDTH = s_axis.TIME_WIDTH;
-    localparam integer CHANNEL_WIDTH = s_axis.CHANNEL_WIDTH;
-    logic [TIME_WIDTH*WORD_WIDTH-1:0] s_axis_tagtime_packed;
-    logic [CHANNEL_WIDTH*WORD_WIDTH-1:0] s_axis_channel_packed;
-
-    always_comb begin
-        for (int i = 0; i < WORD_WIDTH; i++) begin
-            s_axis_tagtime_packed[i*TIME_WIDTH+:TIME_WIDTH] <= s_axis.tagtime[i];
-            s_axis_channel_packed[i*CHANNEL_WIDTH+:CHANNEL_WIDTH] <= s_axis.channel[i];
-        end
-    end
-
-
     // --------------------------------------------------- //
     // ------------------- User_sample ------------------- //
     // --------------------------------------------------- //
@@ -117,15 +100,11 @@ module measurement (
      channel continuously. */
     counter_wrapper #(
         .WISHBONE_INTERFACE_EN(1),
-        .NUM_OF_TAGS(m_axis_counter.WORD_WIDTH)
+        .WINDOW_WIDTH(m_axis_counter.TIME_WIDTH),
+        .CHANNEL_WIDTH(m_axis_counter.CHANNEL_WIDTH)
     ) counter_wrapper_inst (
-        .clk(m_axis_counter.clk),
-        .rst(m_axis_counter.rst),
-        .tagtime(s_axis_tagtime_packed),
-        .lowest_time_bound(m_axis_counter.lowest_time_bound),
-        .channel(s_axis_channel_packed),
-        .valid_tag(m_axis_counter.tvalid ? m_axis_counter.tkeep : '0),
-        .tready(m_axis_counter.tready),
+        .s_axis(m_axis_counter),
+
         .wb(wb_counter),
         /*If you intend to process counter data within the FPGA , set "WISHBONE_INTERFACE_EN"
      to zero. Utilize the signals below to interface with this module.*/
