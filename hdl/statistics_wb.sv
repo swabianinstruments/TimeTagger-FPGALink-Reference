@@ -121,8 +121,8 @@ module si_statistics_wb #(
                     end
                 end
 
-                received_tags <= received_tags + ($countones(post_axis_tkeep) >> 2);
-                tag_rate_counter <= tag_rate_counter + ($countones(post_axis_tkeep) >> 2);
+                received_tags <= received_tags + $unsigned(($countones(post_axis_tkeep) >> 2));
+                tag_rate_counter <= tag_rate_counter + $unsigned(($countones(post_axis_tkeep) >> 2));
                 received_words <= received_words + 1;
                 word_rate_counter <= word_rate_counter + 1;
                 size_of_last_packet_counter <= size_of_last_packet_counter + 1;

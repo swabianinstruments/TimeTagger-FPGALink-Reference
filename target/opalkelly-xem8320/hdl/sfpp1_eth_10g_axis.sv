@@ -243,12 +243,12 @@ module sfpp1_eth_10g_axis (
     // PHY status signals:
     // - 00h: RX Block Lock
     // - 01h: RX High BER
-    wire [15:0] phy_status;
+    logic [15:0] phy_status = 0;
 
     // PHY control signals:
     // - 00h: XGMII loopback mode
-    reg  [ 0:0] phy_control;
-    reg  [ 0:0] phy_control_tx_clk;
+    reg   [ 0:0] phy_control;
+    reg   [ 0:0] phy_control_tx_clk;
 
     // XGMII interface
     wire xgmii_tx_clk, xgmii_tx_rst;
@@ -276,9 +276,6 @@ module sfpp1_eth_10g_axis (
 
     // verilog-ethernet PHY instantiation
 
-    wire rx_block_lock;
-    wire rx_high_ber;
-
     eth_phy_10g #(
         .BIT_REVERSE(1)
     ) sfpp_eth_10g_phy_inst (
@@ -302,15 +299,12 @@ module sfpp1_eth_10g_axis (
         .rx_error_count(),
         .rx_bad_block(),
         .rx_sequence_error(),
-        .rx_block_lock(rx_block_lock),
-        .rx_high_ber(rx_high_ber)
+        .rx_block_lock(phy_status[0]),
+        .rx_high_ber(phy_status[1])
     );
 
     // To avoid unconnected pin critical warning:
     assign gt_tx_header[5:2] = 4'b0000;
-
-    assign phy_status[0] = rx_block_lock;
-    assign phy_status[1] = rx_high_ber;
 
     // Implement XGMII loopback feature
     assign xgmii_tx_data_int = (phy_control_tx_clk[0]) ? xgmii_rx_data : xgmii_tx_data;

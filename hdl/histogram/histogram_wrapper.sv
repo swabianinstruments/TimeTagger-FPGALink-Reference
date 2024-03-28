@@ -258,6 +258,18 @@ module histogram_wrapper #(
             assign fifo_data_valid = !fifo_empty && fifo_rd_en;
             // read the BRAMs if reset_hist_module is 1
             assign hist_read_en = !fifo_prog_full | reset_hist_module;
+
+            /* These outputs are not used when WISHBONE_INTERFACE_EN is one, but initialized to
+               zero to fix warnings */
+            always_comb begin
+                data_out_o <= 0;
+                valid_out_o <= 0;
+                statistics_valid <= 0;
+                index_max <= 0;
+                offset <= 0;
+                variance <= 0;
+            end
+
         end
     endgenerate
 

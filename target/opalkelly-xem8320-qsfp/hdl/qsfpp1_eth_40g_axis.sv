@@ -97,7 +97,7 @@ module qsfpp1_eth_40g_axis (
     // - 12h: TX Reset done
     // - 13h: RX Reset done
     // - 13h: RX Reset done
-    wire [31:0] phy_status;
+    logic [31:0] phy_status = 0;
 
     // PHY loopback control (wired up to PHY loopback control directly)
     reg [11:0] phy_loopback_control;
@@ -134,6 +134,32 @@ module qsfpp1_eth_40g_axis (
     // XLGMII interface
     wire xlgmii_tx_clk, xlgmii_tx_rst;
     wire xlgmii_rx_clk, xlgmii_rx_rst;
+
+    logic user_tx_reset, user_rx_reset;
+
+    xpm_cdc_sync_rst #(
+        .DEST_SYNC_FF(4),
+        .INIT        (1),
+
+        .INIT_SYNC_FF  (0),
+        .SIM_ASSERT_CHK(0)
+    ) xpm_cdc_sync_tx_rst_inst (
+        .dest_rst(xlgmii_tx_rst),
+        .dest_clk(xlgmii_tx_clk),
+        .src_rst (user_tx_reset)
+    );
+
+    xpm_cdc_sync_rst #(
+        .DEST_SYNC_FF(4),
+        .INIT        (1),
+
+        .INIT_SYNC_FF  (0),
+        .SIM_ASSERT_CHK(0)
+    ) xpm_cdc_sync_rx_rst_inst (
+        .dest_rst(xlgmii_rx_rst),
+        .dest_clk(xlgmii_rx_clk),
+        .src_rst (user_rx_reset)
+    );
 
     assign axis_tx_clk = xlgmii_tx_clk;
     assign axis_tx_rst = xlgmii_tx_rst;
@@ -179,16 +205,6 @@ module qsfpp1_eth_40g_axis (
     // according to example design:
     wire qsfpp_eth_40g_phy_rx_core_clk;
     assign qsfpp_eth_40g_phy_rx_core_clk = xlgmii_rx_clk;
-
-    // PHY GT common block clock wrapper and generated clock signals:
-    wire qsfpp_eth_40g_gt_qpll0_reset;  // reset input from GT
-    wire qsfpp_eth_40g_gt_qpll0_lock;
-    wire qsfpp_eth_40g_gt_qpll1_reset;  // reset input from GT
-    wire qsfpp_eth_40g_gt_qpll1_lock;
-    assign phy_status[8]  = qsfpp_eth_40g_gt_qpll0_reset;
-    assign phy_status[9]  = qsfpp_eth_40g_gt_qpll1_reset;
-    assign phy_status[10] = qsfpp_eth_40g_gt_qpll0_lock;
-    assign phy_status[11] = qsfpp_eth_40g_gt_qpll1_lock;
 
     wire [$bits(phy_control)-1:0] phy_control_tx_clk;
     wire [$bits(phy_control)-1:0] phy_control_rx_clk;
@@ -265,28 +281,12 @@ module qsfpp1_eth_40g_axis (
         .src_in(freerun_rst | phy_control_freerun_clk[2] | general_rst)
     );
 
-    // Reset signals for the gtwizard instances and the PHY core, driven by the
-    // reset block:
-    wire qsfpp_eth_40g_phy_tx_core_reset;
-    wire qsfpp_eth_40g_phy_rx_core_reset;
-    wire qsfpp_eth_40g_phy_gtwiz_all_reset;
-    wire qsfpp_eth_40g_phy_gtwiz_tx_reset;
-    wire qsfpp_eth_40g_phy_gtwiz_rx_reset;
-    wire qsfpp_eth_40g_phy_rx_serdes_reset;
-    assign phy_status[12] = qsfpp_eth_40g_phy_tx_core_reset;
-    assign phy_status[13] = qsfpp_eth_40g_phy_rx_core_reset;
-    assign phy_status[14] = qsfpp_eth_40g_phy_gtwiz_all_reset;
-    assign phy_status[15] = qsfpp_eth_40g_phy_gtwiz_tx_reset;
-    assign phy_status[16] = qsfpp_eth_40g_phy_gtwiz_rx_reset;
-    assign phy_status[17] = qsfpp_eth_40g_phy_rx_serdes_reset;
-
     wire rx_core_clk;
     assign rx_core_clk = xlgmii_rx_clk;
 
 
     wire rx_aligned;
     wire rx_status;
-    reg  tx_local_fault;
     reg  reset_tx_datapath;
 
     qsfpp1_eth_40g_phy qsfpp1_eth_40g_phy_inst (
@@ -329,11 +329,13 @@ module qsfpp1_eth_40g_axis (
 
         // XLGMII bus clock and data
         .tx_mii_clk_0(xlgmii_tx_clk),
-        .tx_mii_d_0  (xlgmii_tx_data_int),
-        .tx_mii_c_0  (xlgmii_tx_ctrl_int),
+        .tx_mii_d_0(xlgmii_tx_data_int),
+        .tx_mii_c_0(xlgmii_tx_ctrl_int),
+        .user_tx_reset_0(user_tx_reset),
         .rx_clk_out_0(xlgmii_rx_clk),
-        .rx_mii_d_0  (xlgmii_rx_data),
-        .rx_mii_c_0  (xlgmii_rx_ctrl),
+        .rx_mii_d_0(xlgmii_rx_data),
+        .rx_mii_c_0(xlgmii_rx_ctrl),
+        .user_rx_reset_0(user_rx_reset),
 
         .rxrecclkout_0(),
         .gt_loopback_in_0(phy_loopback_control),
@@ -355,7 +357,6 @@ module qsfpp1_eth_40g_axis (
         .stat_rx_local_fault_0(phy_status[23]),
 
         // TX_0 Signals
-        // .tx_reset_0(qsfpp_eth_40g_phy_tx_core_reset),
         .tx_reset_0(tx_reset),
 
         // TX_0 Control Signals
@@ -390,9 +391,9 @@ module qsfpp1_eth_40g_axis (
 
     xlgmii_axis_bridge bridge (
         .rx_clk(xlgmii_rx_clk),
-        .rx_rst(rx_reset),
+        .rx_rst(rx_reset | xlgmii_rx_rst),
         .tx_clk(xlgmii_tx_clk),
-        .tx_rst(tx_reset),
+        .tx_rst(tx_reset | xlgmii_tx_rst),
 
         .xlgmii_rx_data(xlgmii_rx_data),
         .xlgmii_rx_ctrl(xlgmii_rx_ctrl),

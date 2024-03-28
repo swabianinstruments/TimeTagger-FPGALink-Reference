@@ -160,20 +160,22 @@ module xlgmii_axis_bridge_rx_128b (
 
     // Receive state machine
     always @(posedge clk) begin
+
+        // Output default values
+        error_ready <= 0;
+        error_preamble <= 0;
+        error_xgmii <= 0;
+
+        axis_tvalid <= 0;
+        axis_tdata <= {128{1'bx}};
+        axis_tlast <= 1'bx;
+        axis_tkeep <= {16{1'bx}};
+
         if (rst) begin
             fsm_state <= FSM_IDLE;
             fsm_idle_tolerate_end <= 0;
             fsm_shifted_data_leftover <= 0;
         end else begin
-            // Output default values
-            error_ready <= 0;
-            error_preamble <= 0;
-            error_xgmii <= 0;
-
-            axis_tvalid <= 0;
-            axis_tdata <= {128{1'bx}};
-            axis_tlast <= 1'bx;
-            axis_tkeep <= {16{1'bx}};
 
             // tolerate_end and shifted_preamble are only relevant for the next
             // cycle, thus deassert it by default:
