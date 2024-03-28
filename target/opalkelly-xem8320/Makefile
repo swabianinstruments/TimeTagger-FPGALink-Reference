@@ -13,9 +13,12 @@ synthesis : project
 implementation : synthesis
 	 vivado -mode tcl -source scripts/implementation.tcl
 
+lint : project
+	 vivado -mode batch -source scripts/linter.tcl
+	 python3 ../../scripts/parse_lint_txt.py sfp_prj_lint_log.txt
+
 clean :
 	rm -rf $(filter-out Makefile constr hdl scripts config host README.md . .., $(wildcard *) $(wildcard .*)) .Xil
 
 $(PROJECT_NAME).xpr:
 	 vivado -mode tcl -source scripts/create_project.tcl
-
