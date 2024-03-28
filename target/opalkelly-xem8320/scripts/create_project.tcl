@@ -114,6 +114,7 @@ set_property -dict [list \
   CONFIG.PRIMITIVE {PLL} \
   CONFIG.PRIM_SOURCE {Differential_clock_capable_pin} \
   CONFIG.USE_RESET {false} \
+  CONFIG.OPTIMIZE_CLOCKING_STRUCTURE_EN {true} \
 ] [get_ips clk_core]
 
 generate_target  {instantiation_template synthesis}  [get_files clk_core.xci] -force
