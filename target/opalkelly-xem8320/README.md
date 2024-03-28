@@ -63,6 +63,7 @@ integrated USB controller through the OpalKelly FrontPanel SDK. For support on
 how to install the OpalKelly FrontPanel SDK, please visit the OpalKelly
 website. With the SDK installed, the FPGA can be configured either via the
 FrontPanel Application or from within a Python 3 environment as shown:
+
 ```
 si@ubuntu:target/opalkelly-xem8320$ python3
 >>> import ok
@@ -101,6 +102,7 @@ With a connected TTX with FPGA-Link Output enabled, you can now enable Channel 1
 capture and observe the LED on the XEM8320 matching the input state of the TTX.
 
 ## Debug Information
+
 The design exposes various statistics of the received tags over the OpalKelly
 USB interface, which bridges onto an internal Wishbone Bus. This can be read with the following
 
@@ -129,18 +131,18 @@ si@ubuntu:target/opalkelly-xem8320/host$ python3 -m common.sfp monitor --device 
 Connected to device Opal Kelly XEM8320 with serial 0123456789!
 Connected to the following SFP module:
 
-Vendor:		OEM
-OUI:		0x009065
-Rev:		A
-PN:		SFP-10G-LR
-SN:		01234567890
-DC:		012345
-Type:		SFPSFPP (0x03)
-Connector:	LC (0x07)
-Bitrate:	10300 MBd
-Wavelength:	1310 nm
-		        SM    OM1    OM1    OM3    OM4
-Max length:	   10000 m    0 m    0 m    0 m    0 m
+Vendor:  OEM
+OUI:  0x009065
+Rev:  A
+PN:  SFP-10G-LR
+SN:  01234567890
+DC:  012345
+Type:  SFPSFPP (0x03)
+Connector: LC (0x07)
+Bitrate: 10300 MBd
+Wavelength: 1310 nm
+          SM    OM1    OM1    OM3    OM4
+Max length:    10000 m    0 m    0 m    0 m    0 m
 
 
 Diagnostics:
@@ -191,14 +193,29 @@ The tag time difference detector contains the following registers:
 
 ## Building your own design
 
-*The reference design and the on-the-wire format are not stable and will be subject to incompatible changes with further development*
+If you plan to integrate your own modules into the reference design, it is strongly advised to integrate them into the [`measurement.sv`](./../../hdl/measurement.sv) module. Below is a description of some inputs of the [`measurement.sv`](./../../hdl/measurement.sv) module to which you can connect your modules. These inputs are part of of `s_axis` interface.
 
-To modify this reference design for your own purposes, please take a look at
-`hdl/user_sample.sv` in the top level directory.
+- **`s_axis.tagtime`**: This input signal provides the timestamp of the tags with a resolution of 1/3 picoseconds. The parameter `s_axis.WORD_WIDTH` specifies the number of tagtimes available simultaneously.
+- **`s_axis.channel`**: This input signal indicates the channels associated with the tags. The channel number can range from 1 to 18 for events captured on their rising edge in the Time Tagger X, and from -18 to -1 for events captured on their falling edge in the Time Tagger X.
+- **`s_axis.tvalid`**: This signal is asserted to indicate the presence of at least one valid tagtime in a clock cycle.
+- **`s_axis.tkeep`**: This signal, with a width of `s_axis.WORD_WIDTH`, indicates the validity of each tagtime and its corresponding channel number through individual bits.
 
-The user sample file receives the `tagtime` in 1/3 ps, the `channel` (zero indexed) and the rising/falling edge for
-each event. This should only be sampled if `valid_tag` is set.
+- **`s_axis.lowest_time_bound`**: This signal retains the previous time value. In addition to providing time information for tags, Time Tagger X can transmit supplementary data enabling the reference design to update the time information. Please note that this information is considered valid within a clock cycle only if there is no valid tag time at that particular clock cycle. In such cases, the `s_axis.tvalid` signal should be zero. Otherwise, `s_axis.tagtime` can be used instead.
 
-The code inside the user sample is only there for demonstration purposes and can
-be removed if so desired. Avoid modifying the rest of the reference design as
-much as possible so future changes can be easily incorporated.
+Be sure to minimize alterations to the remainder of the reference design to facilitate seamless integration of future updates.
+
+### Defining FPGA Module Parameters for Wishbone Interface
+
+To effectively communicate with your FPGA modules from a PC via the Wishbone interface, it's crucial to properly define parameters within the [`ref_design_pkg.sv`](./../../hdl/ref_design_pkg.sv) file. The package inside this file, named `pkg_base_address`, houses the necessary parameters for connecting modules to the Wishbone interface. Note that you can refer to the predefined parameters for modules like `histogram.sv` or `counter.sv`, as well as the established connections with Wishbone interfaces.
+
+Follow these steps to define parameters for each module:
+
+- **Define Base Address**: Select a unique base address for your module, ensuring it doesn't conflict with addresses assigned to other modules. Include this base address in the `base_address` local parameter.
+
+- **Specify Memory Size**: Determine a suitable memory size for your module, ensuring it is a power of two. This size should accommodate the required registers within the memory space. Incorporate the memory size into the `memory_space` local parameter.
+
+- **Assign Module Name**: Select a distinct name for your module, avoiding exact matches with any signals or modules instantiated within the top module. Add this name into `wb_instances`. This name serves as an identifier for the location of the corresponding base address and memory size within the `base_address` and `memory_space` parameters. This facilitates the proper connection of the Wishbone interface to your module.
+
+Within `pkg_base_address`, ensure consistency in parameter organization. All parameters—base address, memory size, and module name—should occupy the same position within their respective definitions.
+
+To establish the appropriate Wishbone interface for your module, utilize `wb_array[your_module_name]` within the top module [`xem8320_reference.sv`](./hdl/xem8320_reference.sv), where `your_module_name` corresponds to the name defined in the `base-address` package. Refer to [`xem8320_reference.sv`](./hdl/xem8320_reference.sv), and [`measurement.sv`](./../../hdl/measurement.sv) modules to understand how to connect this interface to your module effectively.
