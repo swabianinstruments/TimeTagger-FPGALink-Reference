@@ -43,7 +43,7 @@ module counter_wrapper #(
     input wire rst,
 
     input wire [       NUM_OF_TAGS - 1 : 0] valid_tag,
-    input wire [       NUM_OF_TAGS - 1 : 0] lowest_time_bound,
+    input wire [         TAG_WIDTH - 1 : 0] lowest_time_bound,
     input wire [    TOT_TAGS_WIDTH - 1 : 0] tagtime,
     input wire [TOT_CHANNELS_WIDTH - 1 : 0] channel,
 
@@ -68,7 +68,7 @@ module counter_wrapper #(
     logic [NUM_OF_TAGS - 1 : 0] valid_tag_inp;
     logic [TOT_TAGS_WIDTH - 1 : 0] tagtime_inp;
     logic [TOT_CHANNELS_WIDTH - 1 : 0] channel_inp;
-    logic [NUM_OF_TAGS - 1 : 0] r1lowest_time_bound;
+    logic [TAG_WIDTH - 1 : 0] r1lowest_time_bound;
 
     // channel mapping
     always_ff @(posedge clk) begin
@@ -87,8 +87,8 @@ module counter_wrapper #(
         and window information even when none of the channel information is being updated.*/
         if (lowest_time_bound != r1lowest_time_bound && (valid_tag | valid_tag_inp) == 0) begin
             valid_tag_inp[0] <= 1;
-            tagtime_inp[0]   <= lowest_time_bound;
-            channel_inp[0]   <= NUM_OF_CHANNELS;
+            tagtime_inp[TAG_WIDTH-1 : 0] <= lowest_time_bound;
+            channel_inp[CHANNEL_WIDTH-1 : 0] <= NUM_OF_CHANNELS;
 
         end
     end
