@@ -28,3 +28,30 @@ cocotb-tests-highspeedin:
     # the root cause of job failures:
     expire_in: 1 day
 
+fpga-linter-sfp:
+  extends: .hdl-test-job-default-config
+  script:
+    - make
+    - "export PATH=/opt/Xilinx/Vivado/2023.2/bin:$PATH"
+    - pushd target/opalkelly-xem8320
+    - make lint
+    - popd
+  artifacts:
+    paths:
+      - target/opalkelly-xem8320/sfp_prj_lint_log.txt
+
+  tags: [vivado]
+
+fpga-linter-qsfp:
+  extends: .hdl-test-job-default-config
+  script:
+    - make
+    - "export PATH=/opt/Xilinx/Vivado/2023.2/bin:$PATH"
+    - pushd target/opalkelly-xem8320-qsfp
+    - make lint
+    - popd
+  artifacts:
+    paths:
+      - target/opalkelly-xem8320-qsfp/qsfp_prj_lint_log.txt
+
+  tags: [vivado]
