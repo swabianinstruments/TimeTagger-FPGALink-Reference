@@ -42,14 +42,18 @@ For detailed information on the usage and configuration of the modules, refer to
 
 ## Getting started
 
-We recommend using the OpalKelly XEM8320. Please follow the direction in the
-[target README](./target/opalkelly-xem8320/README.md) for getting started.
+First up, clone the reference design repository:
+
+``` sh
+$ git clone --recursive https://github.com/swabianinstruments/TimeTagger-FPGALink-Reference.git
+```
+
+We recommend using the OpalKelly XEM8320 for development. Please follow the direction in the
+[target README](./target/opalkelly-xem8320/README.md) for getting started with this target.
 
 ## Roadmap
 
 This repository contains a work-in-progress, we're planning on implementing the following functionality:
-
-- A TTX ethernet mode, removing the bandwidth limit to USB speeds (will be added in the TT release 2.17.0)
 - Retransmission support for recovering from packet losses, storing partial packets in the attached DDR3 RAM
 - Softcore for IP management and various other tasks
 
