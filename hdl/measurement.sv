@@ -72,20 +72,9 @@ module measurement (
     // ------------------- User_sample ------------------- //
     // --------------------------------------------------- //
 
-    user_sample #(
-        .WORD_WIDTH(m_axis_user_sample.WORD_WIDTH)
-    ) user_design (
-        .clk(m_axis_user_sample.clk),
-        .rst(m_axis_user_sample.rst),
-
-        .s_axis_tvalid (m_axis_user_sample.tvalid),
-        .s_axis_tready (m_axis_user_sample.tready),
-        .s_axis_tkeep  (m_axis_user_sample.tkeep),
-        .s_axis_channel(m_axis_user_sample.channel),
-        .s_axis_tagtime(m_axis_user_sample.tagtime),
-
+    user_sample user_design (
+        .s_axis(m_axis_user_sample),
         .wb(wb_user_sample),
-
         .led(led)
     );
 
