@@ -44,6 +44,7 @@ module measurement (
         .CHANNEL_WIDTH(s_axis.CHANNEL_WIDTH)
     )
         m_axis_user_sample (), m_axis_histogram (), m_axis_counter ();
+
     axis_broadcast #(
         .FANOUT(3)
     ) axis_broadcast_inst (
@@ -84,14 +85,10 @@ module measurement (
 
     histogram_wrapper #(
         .WISHBONE_INTERFACE_EN(1),
-        .NUM_OF_TAGS(m_axis_histogram.WORD_WIDTH)
+        .CHANNEL_WIDTH(m_axis_histogram.CHANNEL_WIDTH),
+        .SHIFT_WIDTH($clog2(m_axis_histogram.TIME_WIDTH))
     ) histogram_wrapper_inst (
-        .clk(m_axis_histogram.clk),
-        .rst(m_axis_histogram.rst),
-        .tagtime(s_axis_tagtime_packed),
-        .channel(s_axis_channel_packed),
-        .valid_tag(m_axis_histogram.tvalid ? m_axis_histogram.tkeep : '0),
-        .tready(m_axis_histogram.tready),
+        .s_axis(m_axis_histogram),
 
         .wb(wb_histogram),
 
