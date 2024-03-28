@@ -91,7 +91,7 @@ module xlgmii_axis_bridge_tx_128b (
             prev_tvalid <= 0;
             prev_valid_tdata <= 0;
             prev_valid_tkeep <= 0;
-            prev_valid_tlast <= axis_tlast;
+            prev_valid_tlast <= 0;
         end else if (axis_tvalid) begin
             prev_tvalid <= 1;
             prev_valid_tdata <= axis_tdata[127:64];

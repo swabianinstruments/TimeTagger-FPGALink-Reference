@@ -126,6 +126,7 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 
 # Set 'constrs_1' fileset object
 set files [list \
+ "[file normalize "$target_dir/constr/lint_waivers.xdc"]"\
  "[file normalize "$target_dir/constr/xem8320.xdc"]"\
  "[file normalize "$target_dir/constr/loc_constr.xdc"]"\
  "[file normalize "$target_dir/constr/waivers.xdc"]"\

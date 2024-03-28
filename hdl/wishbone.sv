@@ -94,7 +94,7 @@ module wb_interconnect #(
             assign m_wb[j].rst = s_wb.rst;
 
             assign m_wb[j].dat_i = s_wb.dat_i;  // data to the instances
-            assign m_wb[j].adr = s_wb.adr[MEM_WIDTH-1 : 0];
+            assign m_wb[j].adr = {{(ADDR_WIDTH - MEM_WIDTH) {1'b0}}, s_wb.adr[MEM_WIDTH-1 : 0]};
             assign m_wb[j].we = s_wb.we;
             assign m_wb[j].stb   = (s_wb.adr[ADDR_WIDTH - 1 : MEM_WIDTH] == BASE_ADDRESS[j][ADDR_WIDTH - 1 : MEM_WIDTH])? s_wb.stb : 0;
             assign m_wb[j].cyc   = (s_wb.adr[ADDR_WIDTH - 1 : MEM_WIDTH] == BASE_ADDRESS[j][ADDR_WIDTH - 1 : MEM_WIDTH])? s_wb.cyc : 0;

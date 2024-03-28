@@ -334,6 +334,9 @@ module counter_wrapper #(
                     discard_cnt <= 0;
                 end
             end
+
+            assign count_valid_o = count_valid;
+            assign count_data_o  = count_data;
         end
     endgenerate
     //------------------------------------------------------------------//

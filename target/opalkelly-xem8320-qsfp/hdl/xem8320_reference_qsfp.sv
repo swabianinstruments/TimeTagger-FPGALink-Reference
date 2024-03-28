@@ -60,9 +60,9 @@ module xem8320_reference_qsfp #(
     // QSFP+ Port 1 Control Signals
     inout  wire qsfpp1_i2c_sda,
     inout  wire qsfpp1_i2c_scl,
-    output wire qsfpp1_modsel_b,
-    output wire qsfpp1_reset_b,
-    output wire qsfpp1_lp_mode,
+    output reg  qsfpp1_modsel_b = 0,
+    output reg  qsfpp1_reset_b = 1,
+    output reg  qsfpp1_lp_mode = 0,
     input  wire qsfpp1_modprs_b,
     input  wire qsfpp1_int_b,
 

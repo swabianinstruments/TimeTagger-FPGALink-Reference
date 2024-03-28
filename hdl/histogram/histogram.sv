@@ -315,7 +315,6 @@ module histogram #(
     wire [NUM_OF_TAGS * HIST_WORD_SIZE - 1 : 0] hist_dout[2];
     wire [NUM_OF_TAGS - 1 : 0] hist_valid_out[2];
     wire [NUM_OF_TAGS - 1 : 0] last_sample[2];
-    logic mem_active[2];
 
     // reading the histogram information: here, we generate the address
     // and the enable for reading data from the memories
@@ -348,6 +347,10 @@ module histogram #(
         end
     end
 
+    logic mem_active[2];
+    assign mem_active[0] = toggle;
+    assign mem_active[1] = !toggle;
+
     generate
         for (i = 0; i < NUM_OF_TAGS; i++) begin
             // Here we use the idea of double-buffering to process the income data and
@@ -359,8 +362,6 @@ module histogram #(
             // up the partial data with the previous summation. This can avoid data overflow
             // in FPGA. Backend can use 64-bit data representation for storing the whole data.
 
-            assign mem_active[0] = toggle;
-            assign mem_active[1] = !toggle;
             for (j = 0; j < 2; j++) begin
                 // Generating the proper address for each hist_1lane
                 // module in DATA_GATHERING state
