@@ -49,7 +49,7 @@ endinterface
 
 // Broadcast module
 // Optimized for low resources, asserts tready if all clients have processed the last word
-module axis_broadcast #(
+module axis_tag_broadcast #(
     parameter integer FANOUT = 1
 ) (
     axis_tag_interface.slave  s_axis,

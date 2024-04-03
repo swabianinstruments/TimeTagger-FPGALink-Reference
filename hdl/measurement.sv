@@ -45,9 +45,9 @@ module measurement (
     )
         m_axis_user_sample (), m_axis_histogram (), m_axis_counter ();
 
-    axis_broadcast #(
+    axis_tag_broadcast #(
         .FANOUT(3)
-    ) axis_broadcast_inst (
+    ) axis_tag_broadcast_inst (
         .s_axis(s_axis),
         .m_axis({m_axis_user_sample, m_axis_histogram, m_axis_counter})
     );
