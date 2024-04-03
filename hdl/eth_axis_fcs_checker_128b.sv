@@ -25,28 +25,24 @@
 
 // Checks the crc value of ethernet packets and removes it
 module eth_axis_fcs_checker_128b (
-    input wire clk,
-    input wire rst,
 
-    /*
-    * AXI input
-    */
-    input  wire [127:0] s_axis_tdata,
-    // tkeep is ignored in this module, input packet len % 32 byte == 4
-    input  wire [ 15:0] s_axis_tkeep,
-    input  wire         s_axis_tvalid,
-    output wire         s_axis_tready,
-    input  wire         s_axis_tlast,
-
-    /*
-    * AXI output
-    */
-    output reg  [127:0] m_axis_tdata,
-    output reg  [ 15:0] m_axis_tkeep = 16'hFFFF,
-    output reg          m_axis_tvalid,
-    input  wire         m_axis_tready,
-    output reg          m_axis_tlast
+    axis_interface.slave  s_axis,
+    axis_interface.master m_axis
 );
+
+    initial begin
+        if (s_axis.DATA_WIDTH != 128) begin
+            $error("Error: s_axis.DATA_WIDTH needs to be 128 bits");
+            $finish;
+        end
+
+        if (m_axis.DATA_WIDTH != 128) begin
+            $error("Error: m_axis.DATA_WIDTH needs to be 128 bits");
+            $finish;
+        end
+    end
+
+    assign m_axis.tkeep = {(m_axis.KEEP_WIDTH) {1'b1}};
 
     localparam [31:0] initial_fcs_state = 32'hFFFFFFFF;
     reg  [31:0] fcs_state;
@@ -62,23 +58,23 @@ module eth_axis_fcs_checker_128b (
 `ifndef VERILATOR
     eth_crc_128b_comb eth_crc_128b_comb_inst (
         .state_in (fcs_state),
-        .data_in  (s_axis_tdata),
+        .data_in  (s_axis.tdata),
         .state_out(fcs_state_next)
     );
 `else
     // See the comment above, this is a dummy statement!
-    assign fcs_state_next = fcs_state ^ {31'h0, &s_axis_tdata};
+    assign fcs_state_next = fcs_state ^ {31'h0, &s_axis.tdata};
 `endif
 
-    always @(posedge clk) begin
-        if (rst) begin
+    always @(posedge s_axis.clk) begin
+        if (s_axis.rst) begin
             fcs_state <= initial_fcs_state;
         end else begin
-            if (s_axis_tvalid && s_axis_tready) begin
+            if (s_axis.tvalid && s_axis.tready) begin
                 // If the data is valid, forward the FCS state
                 fcs_state <= fcs_state_next;
 
-                if (s_axis_tlast) begin
+                if (s_axis.tlast) begin
                     // If this is the last input word, reset the fcs_state to the initial state value.
                     fcs_state <= initial_fcs_state;
                 end
@@ -94,16 +90,16 @@ module eth_axis_fcs_checker_128b (
     reg         last;
     reg         invalid;
 
-    always @(posedge clk) begin
-        if (rst) begin
+    always @(posedge s_axis.clk) begin
+        if (s_axis.rst) begin
             tdata <= 0;
             valid <= 0;
-        end else if (s_axis_tready && s_axis_tvalid) begin
+        end else if (s_axis.tready && s_axis.tvalid) begin
             if (valid) begin
                 valid <= 0;
             end
-            if (!s_axis_tlast) begin
-                tdata <= s_axis_tdata;
+            if (!s_axis.tlast) begin
+                tdata <= s_axis.tdata;
                 valid <= 1;
             end
         end
@@ -112,9 +108,9 @@ module eth_axis_fcs_checker_128b (
     assign expected_crc = ~fcs_state;
 
     always @(*) begin
-        if (!rst && s_axis_tvalid && s_axis_tready && s_axis_tlast) begin
+        if (!s_axis.rst && s_axis.tvalid && s_axis.tready && s_axis.tlast) begin
             last = 1;
-            if ((expected_crc) == s_axis_tdata[31:0]) begin
+            if ((expected_crc) == s_axis.tdata[31:0]) begin
                 invalid = 0;
             end else begin
                 // axis_fifo removes the whole package from the fifo
@@ -124,7 +120,7 @@ module eth_axis_fcs_checker_128b (
             invalid = 0;
             last = 0;
         end
-        fifo_valid = valid && s_axis_tready && s_axis_tvalid;
+        fifo_valid = valid && s_axis.tready && s_axis.tvalid;
     end
 
     // Small fifo to be able to drop packets if needed
@@ -139,24 +135,24 @@ module eth_axis_fcs_checker_128b (
         .DROP_OVERSIZE_FRAME(1),
         .DROP_BAD_FRAME(1)
     ) fifo (
-        .clk(clk),
-        .rst(rst),
+        .clk(s_axis.clk),
+        .rst(s_axis.rst),
 
         .s_axis_tdata(tdata),
         .s_axis_tvalid(fifo_valid),
         .s_axis_tuser(invalid),
         .s_axis_tlast(last),
-        .s_axis_tready(s_axis_tready), // This may lead to the module not being ready when in could be when the buffer gets full, but simplifies the logic and shouldn't happen anyway
+        .s_axis_tready(s_axis.tready), // This may lead to the module not being ready when in could be when the buffer gets full, but simplifies the logic and shouldn't happen anyway
 
-        .m_axis_tdata (m_axis_tdata),
-        .m_axis_tvalid(m_axis_tvalid),
-        .m_axis_tready(m_axis_tready),
-        .m_axis_tlast (m_axis_tlast)
+        .m_axis_tdata (m_axis.tdata),
+        .m_axis_tvalid(m_axis.tvalid),
+        .m_axis_tready(m_axis.tready),
+        .m_axis_tlast (m_axis.tlast)
         // TODO pass the overflow signal through?
     );
     /*v verilator lint_on PINMISSING*/
 
     // Unused signals as per Verilator guidelines:
     // https://verilator.org/guide/latest/warnings.html
-    wire _unused_ok = &{1'b0, s_axis_tkeep, 1'b0};
+    wire _unused_ok = &{1'b0, s_axis.tkeep, 1'b0};
 endmodule

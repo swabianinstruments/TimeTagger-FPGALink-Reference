@@ -40,23 +40,17 @@ module sfpp1_eth_10g_axis (
     output wire sfpp_tx_p,
     output wire sfpp_tx_n,
 
-    // AXI4-Stream output (without preamble & FCS)
-    output wire        axis_rx_clk,
-    output wire        axis_rx_rst,
-    input  wire        axis_rx_tready,
-    output wire        axis_rx_tvalid,
-    output wire [63:0] axis_rx_tdata,
-    output wire        axis_rx_tlast,
-    output wire [ 7:0] axis_rx_tkeep,
-
     // AXI4-Stream input (without preamble & FCS, IFG maintained internally)
-    output wire        axis_tx_clk,
-    output wire        axis_tx_rst,
-    output wire        axis_tx_tready,
-    input  wire        axis_tx_tvalid,
-    input  wire [63:0] axis_tx_tdata,
-    input  wire        axis_tx_tlast,
-    input  wire [ 7:0] axis_tx_tkeep,
+    output wire axis_tx_clk,
+    output wire axis_tx_rst,
+
+    axis_interface.slave axis_tx,
+
+    // AXI4-Stream output (without preamble & FCS)
+    output wire axis_rx_clk,
+    output wire axis_rx_rst,
+
+    axis_interface.master axis_rx,
 
     // Wishbone interface for control & status
     wb_interface.slave wb
@@ -319,15 +313,8 @@ module sfpp1_eth_10g_axis (
     assign axis_tx_rst = xgmii_tx_rst;
 
     xgmii_axis_bridge #(
-        .DATA_WIDTH(64)
+        .DATA_WIDTH(axis_tx.DATA_WIDTH)
     ) sfpp_eth_10g_xgmii_axis_bridge (
-        // Clocking & reset
-        .rx_clk(xgmii_rx_clk),
-        .rx_rst(xgmii_rx_rst),
-
-        .tx_clk(xgmii_tx_clk),
-        .tx_rst(xgmii_tx_rst),
-
         // XGMII interface
         .xgmii_rx_data(xgmii_rx_data),
         .xgmii_rx_ctrl(xgmii_rx_ctrl),
@@ -335,18 +322,8 @@ module sfpp1_eth_10g_axis (
         .xgmii_tx_data(xgmii_tx_data),
         .xgmii_tx_ctrl(xgmii_tx_ctrl),
 
-        // AXI4-Stream interface
-        .axis_rx_tready(axis_rx_tready),
-        .axis_rx_tvalid(axis_rx_tvalid),
-        .axis_rx_tdata (axis_rx_tdata),
-        .axis_rx_tlast (axis_rx_tlast),
-        .axis_rx_tkeep (axis_rx_tkeep),
-
-        .axis_tx_tready(axis_tx_tready),
-        .axis_tx_tvalid(axis_tx_tvalid),
-        .axis_tx_tdata (axis_tx_tdata),
-        .axis_tx_tlast (axis_tx_tlast),
-        .axis_tx_tkeep (axis_tx_tkeep),
+        .axis_tx(axis_tx),
+        .axis_rx(axis_rx),
 
         // Error / status signals
         .rx_error_ready(),

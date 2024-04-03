@@ -32,8 +32,7 @@
 module xgmii_axis_bridge_tx_64b #(
     parameter ENABLE_DIC = 1
 ) (
-    input wire clk,
-    input wire rst,
+    axis_interface.slave axis,
 
     // Provide default (reset) values for xgmii_data and xgmii_ctrl,
     // as the cocotbext-eth testbench XgmiiSink expects signals to be
@@ -41,14 +40,15 @@ module xgmii_axis_bridge_tx_64b #(
     output reg [63:0] xgmii_data,
     output reg [ 7:0] xgmii_ctrl = 8'hFF,
 
-    output reg         axis_tready,
-    input  wire        axis_tvalid,
-    input  wire [63:0] axis_tdata,
-    input  wire        axis_tlast,
-    input  wire [ 7:0] axis_tkeep,
-
     output reg error_tlast_tkeep
 );
+
+    initial begin
+        if (axis.DATA_WIDTH != 64) begin
+            $error("Error: axis.DATA_WIDTH needs to be 64 bits");
+            $finish;
+        end
+    end
 
     // --------- XGMII & Ethernet constants ----------
     localparam [7:0] XGMII_IDLE = 8'h07, XGMII_START = 8'hFB, XGMII_END = 8'hFD;
@@ -60,8 +60,8 @@ module xgmii_axis_bridge_tx_64b #(
     reg [7:0] axis_tkeep_masked;
 
     always @(*) begin
-        if (axis_tlast) begin
-            axis_tkeep_masked = axis_tkeep;
+        if (axis.tlast) begin
+            axis_tkeep_masked = axis.tkeep;
         end else begin
             axis_tkeep_masked = 8'hFF;
         end
@@ -86,8 +86,8 @@ module xgmii_axis_bridge_tx_64b #(
     // wrapping or to reset it (on the start of a new transmission).
     reg ifg_reset, ifg_add_double, ifg_add_single;
 
-    always @(posedge clk) begin
-        if (rst) begin
+    always @(posedge axis.clk) begin
+        if (axis.rst) begin
             // On reset it's fine to assume a full IFG was maintained.
             ifg_state <= 3;
         end else if (ifg_reset) begin
@@ -179,17 +179,17 @@ module xgmii_axis_bridge_tx_64b #(
     reg [ 3:0] prev_valid_tkeep;
     reg        prev_valid_tlast;
 
-    always @(posedge clk) begin
-        if (rst) begin
+    always @(posedge axis.clk) begin
+        if (axis.rst) begin
             prev_tvalid <= 0;
             prev_valid_tdata <= 0;
             prev_valid_tkeep <= 0;
             prev_valid_tlast <= 0;
-        end else if (axis_tvalid) begin
+        end else if (axis.tvalid) begin
             prev_tvalid <= 1;
-            prev_valid_tdata <= axis_tdata[63:32];
+            prev_valid_tdata <= axis.tdata[63:32];
             prev_valid_tkeep <= axis_tkeep_masked[7:4];
-            prev_valid_tlast <= axis_tlast;
+            prev_valid_tlast <= axis.tlast;
         end else begin
             prev_tvalid <= 0;
         end
@@ -216,7 +216,7 @@ module xgmii_axis_bridge_tx_64b #(
         error_tlast_tkeep = 0;
 
         // We enforce a non-zero tkeep be asserted along tlast.
-        if (axis_tlast && (axis_tkeep == 0)) begin
+        if (axis.tlast && (axis.tkeep == 0)) begin
             error_tlast_tkeep = 1;
         end
 
@@ -228,7 +228,7 @@ module xgmii_axis_bridge_tx_64b #(
             // valid is constantly asserted during a single transmission.
 
             adjusted_tvalid = prev_tvalid;
-            adjusted_tdata  = {axis_tdata[31:0], prev_valid_tdata};
+            adjusted_tdata  = {axis.tdata[31:0], prev_valid_tdata};
 
             // Don't expose the upper tkeep (which might be asserted) when the
             // lower isn't fully asserted (end of transaction) or when last was
@@ -250,10 +250,10 @@ module xgmii_axis_bridge_tx_64b #(
                 adjusted_tlast = 0;
             end
         end else begin
-            adjusted_tvalid = axis_tvalid;
-            adjusted_tdata  = axis_tdata;
+            adjusted_tvalid = axis.tvalid;
+            adjusted_tdata  = axis.tdata;
             adjusted_tkeep  = axis_tkeep_masked;
-            adjusted_tlast  = axis_tlast;
+            adjusted_tlast  = axis.tlast;
         end
     end
 
@@ -271,8 +271,8 @@ module xgmii_axis_bridge_tx_64b #(
     reg [ 7:0] xgmii_ctrl_next = 8'hFF;
 
 
-    always @(posedge clk) begin
-        if (rst) begin
+    always @(posedge axis.clk) begin
+        if (axis.rst) begin
             fsm_state_reg <= FSM_IDLE;
             fsm_end_transmission <= 0;
             fsm_shifted_preamble <= 0;
@@ -323,7 +323,7 @@ module xgmii_axis_bridge_tx_64b #(
         // Remainder of last packet, mod 4 (relevant for DIC)
         last_packet_rem_next = last_packet_rem;
         // Combinational AXI4-Stream sink ready feedback
-        axis_tready = 0;
+        axis.tready = 0;
         // XGMII output is produced in every branch below, use X to aid in
         // simulation. Should never propagate to output:
         xgmii_ctrl_next = {8{1'bx}};
@@ -331,7 +331,7 @@ module xgmii_axis_bridge_tx_64b #(
 
         case (fsm_state_reg)
             FSM_IDLE: begin
-                if (axis_tvalid && (ifg_state == 3)) begin
+                if (axis.tvalid && (ifg_state == 3)) begin
                     // Branch A: we've transmitted at least the full 12 bytes of
                     // IFG. This means that we can unconditionally start
                     // transmission on the first octet.
@@ -356,7 +356,7 @@ module xgmii_axis_bridge_tx_64b #(
 
                     // Go to FSM_TRANSMIT state.
                     fsm_state_next = FSM_TRANSMIT;
-                end else if (axis_tvalid && (ifg_state == 2)) begin
+                end else if (axis.tvalid && (ifg_state == 2)) begin
                     // Branch B: we've transmitted at least 8 bytes of IFG. This
                     // means that we can either -- depending on the DIC -- start
                     // transmission on the first or fifth octet. Manipulate the
@@ -400,7 +400,7 @@ module xgmii_axis_bridge_tx_64b #(
 
                     // Go to FSM_TRANSMIT state.
                     fsm_state_next = FSM_TRANSMIT;
-                end else if (axis_tvalid
+                end else if (axis.tvalid
                            && (ifg_state == 1)
                            && (last_packet_rem != 0)
                            && (dic_deleted + last_packet_rem <= 3)) begin
@@ -465,7 +465,7 @@ module xgmii_axis_bridge_tx_64b #(
                 end else begin
                     // Accept the provided data. adjusted_tvalid is checked in
                     // the branch above.
-                    axis_tready = !fsm_mask_ready;
+                    axis.tready = !fsm_mask_ready;
 
                     // Set the XGMII bus word based on the adjusted tkeep
                     for (i = 0; i < 8; i = i + 1) begin
@@ -520,7 +520,7 @@ module xgmii_axis_bridge_tx_64b #(
                         // to IDLE state.
                         fsm_end_transmission_next = 0;
                         fsm_state_next = FSM_IDLE;
-                    end else if (axis_tlast) begin
+                    end else if (axis.tlast) begin
                         // This wasn't the last adjusted (shifted) word, but the
                         // last non-shifted AXI transaction. This means that the
                         // lower half of the next (shifted) word will contain the

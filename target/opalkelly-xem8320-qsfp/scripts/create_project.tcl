@@ -43,6 +43,7 @@ set files [list \
  "[file normalize "$target_dir/hdl/xlgmii_axis_bridge_rx_128b.sv"]"\
  "[file normalize "$target_dir/hdl/xlgmii_axis_bridge_tx_128b.sv"]"\
  "[file normalize "$origin_dir/hdl/axis_tag_interface.sv"]"\
+ "[file normalize "$origin_dir/hdl/axis_interface.sv"]"\
  "[file normalize "$origin_dir/hdl/eth_axis_fcs_checker_128b.sv"]"\
  "[file normalize "$origin_dir/hdl/wb_master.sv"]"\
  "[file normalize "$origin_dir/hdl/data_channel.sv"]"\
