@@ -30,22 +30,22 @@
 // verilog_format: on
 
 module xgmii_axis_bridge_rx_64b (
-    input wire clk,
-    input wire rst,
+    axis_interface.master axis,
 
     input wire [63:0] xgmii_data,
     input wire [ 7:0] xgmii_ctrl,
-
-    input  wire        axis_tready,
-    output reg         axis_tvalid,
-    output reg  [63:0] axis_tdata,
-    output reg         axis_tlast,
-    output reg  [ 7:0] axis_tkeep,
 
     output reg error_ready,
     output reg error_preamble,
     output reg error_xgmii
 );
+
+    initial begin
+        if (axis.DATA_WIDTH != 64) begin
+            $error("Error: axis.DATA_WIDTH needs to be 64 bits");
+            $finish;
+        end
+    end
 
     // --------- XGMII & Ethernet constants ----------
     localparam [7:0] XGMII_IDLE = 8'h07, XGMII_START = 8'hFB, XGMII_END = 8'hFD;
@@ -75,7 +75,7 @@ module xgmii_axis_bridge_rx_64b (
     // holds. To make this code more reusable, and later stages simpler, prevent
     // empty last bus transactions, so the last bus transaction is guaranteed to
     // always carry some valid data.
-    always @(posedge clk) begin
+    always @(posedge axis.clk) begin
         xgmii_ctrl_p <= xgmii_ctrl;
         xgmii_data_p <= xgmii_data;
     end
@@ -113,7 +113,7 @@ module xgmii_axis_bridge_rx_64b (
     endgenerate
 
     // Provide a pipelined version of the signal
-    always @(posedge clk) begin
+    always @(posedge axis.clk) begin
         tkeep_enc_p <= tkeep_enc;
     end
 
@@ -149,8 +149,8 @@ module xgmii_axis_bridge_rx_64b (
     reg [ 3:0] fsm_shifted_tkeep_enc_p;
 
     // Shifted data
-    always @(posedge clk) begin
-        if (rst) begin
+    always @(posedge axis.clk) begin
+        if (axis.rst) begin
             fsm_shifted_ctrl_p <= 4'hF;
             fsm_shifted_data_p <= {4{XGMII_IDLE}};
             fsm_shifted_tkeep_enc_p <= 0;
@@ -169,18 +169,18 @@ module xgmii_axis_bridge_rx_64b (
     reg fsm_idle_tolerate_end;
 
     // Receive state machine
-    always @(posedge clk) begin
+    always @(posedge axis.clk) begin
         // Output default values
         error_ready <= 0;
         error_preamble <= 0;
         error_xgmii <= 0;
 
-        axis_tvalid <= 0;
-        axis_tdata <= {64{1'bx}};
-        axis_tlast <= 1'bx;
-        axis_tkeep <= {8{1'bx}};
+        axis.tvalid <= 0;
+        axis.tdata <= {64{1'bx}};
+        axis.tlast <= 1'bx;
+        axis.tkeep <= {8{1'bx}};
 
-        if (rst) begin
+        if (axis.rst) begin
             fsm_state <= FSM_IDLE;
             fsm_idle_tolerate_end <= 0;
         end else begin
@@ -286,12 +286,12 @@ module xgmii_axis_bridge_rx_64b (
                     end else begin
                         // Okay, good we have some data. Place it on the
                         // AXI4-Stream bus:
-                        axis_tvalid <= 1;
-                        axis_tdata  <= xgmii_data_p;
+                        axis.tvalid <= 1;
+                        axis.tdata  <= xgmii_data_p;
 
                         // Make sure that ready is asserted. We can't handle the
                         // slave not being ready, so raise an error if it is not:
-                        if (axis_tready != 1'b1) begin
+                        if (axis.tready != 1'b1) begin
                             error_ready <= 1;
                         end
 
@@ -299,8 +299,8 @@ module xgmii_axis_bridge_rx_64b (
                         // encoded tkeep, as well as the lookahead. This also
                         // determines state transitions back to IDLE.
                         if (tkeep_enc_p != 8'hFF) begin
-                            axis_tlast <= 1;
-                            axis_tkeep <= tkeep_enc_p;
+                            axis.tlast <= 1;
+                            axis.tkeep <= tkeep_enc_p;
                             fsm_state  <= FSM_IDLE;
                         end else if (xgmii_ctrl[0] && (xgmii_data[7:0] == XGMII_END)) begin
                             // Lookahead tells us that the next XGMII bus word
@@ -308,12 +308,12 @@ module xgmii_axis_bridge_rx_64b (
                             // in IDLE:
                             fsm_idle_tolerate_end <= 1;
 
-                            axis_tlast <= 1;
-                            axis_tkeep <= 8'hFF;
+                            axis.tlast <= 1;
+                            axis.tkeep <= 8'hFF;
                             fsm_state <= FSM_IDLE;
                         end else begin
-                            axis_tlast <= 0;
-                            axis_tkeep <= 8'hFF;
+                            axis.tlast <= 0;
+                            axis.tkeep <= 8'hFF;
                         end
 
                         // The tkeep logic also provides a mask for control
@@ -322,7 +322,7 @@ module xgmii_axis_bridge_rx_64b (
                         // means that the packet must've experienced an error:
                         if ((xgmii_ctrl_p & tkeep_enc_p) != 8'h0) begin
                             error_xgmii <= 1;
-                            axis_tlast  <= 1;
+                            axis.tlast  <= 1;
                             fsm_state   <= FSM_IDLE;
                         end
 
@@ -336,12 +336,12 @@ module xgmii_axis_bridge_rx_64b (
 
                 FSM_SHIFTED: begin
                     // We have some data. Place it on the AXI4-Stream bus:
-                    axis_tvalid <= 1;
-                    axis_tdata  <= {xgmii_data_a_p[3:0], fsm_shifted_data_p};
+                    axis.tvalid <= 1;
+                    axis.tdata  <= {xgmii_data_a_p[3:0], fsm_shifted_data_p};
 
                     // Make sure that ready is asserted. We can't handle the slave
                     // not being ready, so raise an error if it is not:
-                    if (axis_tready != 1'b1) begin
+                    if (axis.tready != 1'b1) begin
                         error_ready <= 1;
                     end
 
@@ -357,14 +357,14 @@ module xgmii_axis_bridge_rx_64b (
                     // (unequal 4'hF). If that is the case, then the lower half of
                     // our produced data contains the end.
                     if (fsm_shifted_tkeep_enc_p != 4'hF) begin
-                        axis_tlast <= 1;
-                        axis_tkeep <= {4'h0, fsm_shifted_tkeep_enc_p};
+                        axis.tlast <= 1;
+                        axis.tkeep <= {4'h0, fsm_shifted_tkeep_enc_p};
                         fsm_state  <= FSM_IDLE;
                     end  // Then, we need to check whether the end of frame is
                          // somewhere in the upper part of our current produced data.
                     else if (tkeep_enc_p[3:0] != 4'hF) begin
-                        axis_tlast <= 1;
-                        axis_tkeep <= {tkeep_enc_p[3:0], 4'hF};
+                        axis.tlast <= 1;
+                        axis.tkeep <= {tkeep_enc_p[3:0], 4'hF};
                         fsm_state  <= FSM_IDLE;
 
                     end else if (xgmii_ctrl_p[4] && (xgmii_data_a_p[4] == XGMII_END)) begin
@@ -373,8 +373,8 @@ module xgmii_axis_bridge_rx_64b (
                         // frame. This would mean that XGMII_END would be the first
                         // byte of the next shifted bus word we process, and thus the
                         // next shifted bus word wouldn't hold any valid data.
-                        axis_tlast <= 1;
-                        axis_tkeep <= 8'hFF;
+                        axis.tlast <= 1;
+                        axis.tkeep <= 8'hFF;
                         fsm_state  <= FSM_IDLE;
 
                     end else begin
@@ -384,8 +384,8 @@ module xgmii_axis_bridge_rx_64b (
                         // future) half of the current XGMII bus word any more.
 
                         // If none of the above, entire word is valid data.
-                        axis_tlast <= 0;
-                        axis_tkeep <= 8'hFF;
+                        axis.tlast <= 0;
+                        axis.tkeep <= 8'hFF;
                     end
 
                     // The tkeep logic also provides a mask for control
@@ -396,7 +396,7 @@ module xgmii_axis_bridge_rx_64b (
                                       || (fsm_shifted_tkeep_enc_p == 4'hF
                                           && (xgmii_ctrl_p[3:0] & tkeep_enc_p[3:0]) != 4'h0)) begin
                         error_xgmii <= 1;
-                        axis_tlast  <= 1;
+                        axis.tlast  <= 1;
                         fsm_state   <= FSM_IDLE;
                     end
                 end

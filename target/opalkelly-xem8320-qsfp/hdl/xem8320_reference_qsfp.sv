@@ -78,16 +78,13 @@ module xem8320_reference_qsfp #(
     // --------------------------------------------------- //
     localparam GT_WORD_WIDTH = 4;  // 2 ==> 10G, 4 ==> 40G
     localparam GT_DATA_WIDTH = 32 * GT_WORD_WIDTH;
-    localparam GT_KEEP_WIDTH = ((GT_DATA_WIDTH + 7) / 8);
 
     // DC_WORD_WIDTH should be fixed at 4; otherwise crc checker
     // should be newly generated from the python code.
     localparam DC_WORD_WIDTH = 4;
     localparam DC_DATA_WIDTH = 32 * DC_WORD_WIDTH;
-    localparam DC_KEEP_WIDTH = ((DC_DATA_WIDTH + 7) / 8);
 
     localparam TC_DATA_WIDTH = 32 * TC_WORD_WIDTH;
-    localparam TC_KEEP_WIDTH = ((TC_DATA_WIDTH + 7) / 8);
 
     // --------------------------------------------------- //
     // --------------- OPALKELLY INTERFACE --------------- //
@@ -297,26 +294,26 @@ module xem8320_reference_qsfp #(
 
     // ---------- QSFP+ PORT 1 (incl. TRANSCEIVER + PHY + AXI4-STREAM) ----------
 
-    wire                     eth_axis_tx_clk;
-    wire                     eth_axis_tx_rst;
-    wire                     eth_axis_tx_tready;
-    wire                     eth_axis_tx_tvalid;
-    wire [GT_DATA_WIDTH-1:0] eth_axis_tx_tdata;
-    wire                     eth_axis_tx_tlast;
-    wire [GT_KEEP_WIDTH-1:0] eth_axis_tx_tkeep;
+    wire eth_axis_tx_clk, eth_axis_tx_rst;
+    wire eth_axis_rx_clk, eth_axis_rx_rst;
 
-    wire                     eth_axis_rx_clk;
-    wire                     eth_axis_rx_rst;
-    wire                     eth_axis_rx_tready;
-    wire                     eth_axis_rx_tvalid;
-    wire [GT_DATA_WIDTH-1:0] eth_axis_rx_tdata;
-    wire                     eth_axis_rx_tlast;
-    wire [GT_KEEP_WIDTH-1:0] eth_axis_rx_tkeep;
+    axis_interface #(
+        .DATA_WIDTH(GT_DATA_WIDTH)
+    ) eth_axis_tx (
+        .clk(eth_axis_tx_clk),
+        .rst(eth_axis_tx_rst)
+    );
+    axis_interface #(
+        .DATA_WIDTH(GT_DATA_WIDTH)
+    ) eth_axis_rx (
+        .clk(eth_axis_rx_clk),
+        .rst(eth_axis_rx_rst)
+    );
 
-    assign eth_axis_tx_tvalid = 0;
-    assign eth_axis_tx_tdata  = 0;
-    assign eth_axis_tx_tkeep  = 0;
-    assign eth_axis_tx_tlast  = 0;
+    assign eth_axis_tx.tvalid = 0;
+    assign eth_axis_tx.tdata  = 0;
+    assign eth_axis_tx.tkeep  = 0;
+    assign eth_axis_tx.tlast  = 0;
 
     // Transceiver + PHY
     qsfpp1_eth_40g_axis qsfpp1_eth_40g_axis_inst (
@@ -336,30 +333,22 @@ module xem8320_reference_qsfp #(
 
         .axis_tx_clk(eth_axis_tx_clk),
         .axis_tx_rst(eth_axis_tx_rst),
-        .axis_tx_tready(eth_axis_tx_tready),
-        .axis_tx_tvalid(eth_axis_tx_tvalid),
-        .axis_tx_tdata(eth_axis_tx_tdata),
-        .axis_tx_tlast(eth_axis_tx_tlast),
-        .axis_tx_tkeep(eth_axis_tx_tkeep),
-
         .axis_rx_clk(eth_axis_rx_clk),
         .axis_rx_rst(eth_axis_rx_rst),
-        .axis_rx_tready(eth_axis_rx_tready),
-        .axis_rx_tvalid(eth_axis_rx_tvalid),
-        .axis_rx_tdata(eth_axis_rx_tdata),
-        .axis_rx_tlast(eth_axis_rx_tlast),
-        .axis_rx_tkeep(eth_axis_rx_tkeep)
+
+        .axis_tx(eth_axis_tx),
+        .axis_rx(eth_axis_rx)
     );
 
     // --------------------------------------------------- //
     // -------- SYNCHRONIZATION AND WIDTH ADAPTION ------- //
     // --------------------------------------------------- //
-
-    wire                     sync_rx_data_tready;
-    wire                     sync_rx_data_tvalid;
-    wire [DC_DATA_WIDTH-1:0] sync_rx_data_tdata;
-    wire                     sync_rx_data_tlast;
-    wire [DC_KEEP_WIDTH-1:0] sync_rx_data_tkeep;
+    axis_interface #(
+        .DATA_WIDTH(DC_DATA_WIDTH)
+    ) sync_rx_data (
+        .clk(sys_clk),
+        .rst(sys_clk_rst)
+    );
 
     // this block is used for synchronization and width adaptation.
     axis_async_fifo_adapter #(
@@ -376,85 +365,59 @@ module xem8320_reference_qsfp #(
         .DROP_BAD_FRAME(0),
         .DROP_WHEN_FULL(0)
     ) axi_adapter_and_cdc_buffer (
-        .s_clk(eth_axis_rx_clk),
-        .s_rst(eth_axis_rx_rst),
-        .s_axis_tready(eth_axis_rx_tready),
-        .s_axis_tvalid(eth_axis_rx_tvalid),
-        .s_axis_tdata(eth_axis_rx_tdata),
-        .s_axis_tlast(eth_axis_rx_tlast),
-        .s_axis_tkeep(eth_axis_rx_tkeep),
+        .s_clk(eth_axis_rx.clk),
+        .s_rst(eth_axis_rx.rst),
+        .s_axis_tready(eth_axis_rx.tready),
+        .s_axis_tvalid(eth_axis_rx.tvalid),
+        .s_axis_tdata(eth_axis_rx.tdata),
+        .s_axis_tlast(eth_axis_rx.tlast),
+        .s_axis_tkeep(eth_axis_rx.tkeep),
 
-        .m_clk(sys_clk),
-        .m_rst(sys_clk_rst),
-        .m_axis_tready(sync_rx_data_tready),
-        .m_axis_tvalid(sync_rx_data_tvalid),
-        .m_axis_tdata(sync_rx_data_tdata),
-        .m_axis_tlast(sync_rx_data_tlast),
-        .m_axis_tkeep(sync_rx_data_tkeep)
+        .m_clk(sync_rx_data.clk),
+        .m_rst(sync_rx_data.rst),
+        .m_axis_tready(sync_rx_data.tready),
+        .m_axis_tvalid(sync_rx_data.tvalid),
+        .m_axis_tdata(sync_rx_data.tdata),
+        .m_axis_tlast(sync_rx_data.tlast),
+        .m_axis_tkeep(sync_rx_data.tkeep)
     );
 
     // --------------------------------------------------- //
     // ------------ CRC CHECKSUM VERIFICATION ------------ //
     // --------------------------------------------------- //
 
-    wire                     data_stream_tready;
-    wire                     data_stream_tvalid;
-    wire [DC_DATA_WIDTH-1:0] data_stream_tdata;
-    wire                     data_stream_tlast;
-    wire [DC_KEEP_WIDTH-1:0] data_stream_tkeep;
+    axis_interface #(
+        .DATA_WIDTH(DC_DATA_WIDTH)
+    ) data_stream (
+        .clk(sys_clk),
+        .rst(sys_clk_rst)
+    );
 
     // CRC checksum verification
     eth_axis_fcs_checker_128b fcs_checker (
-        .clk(sys_clk),
-        .rst(sys_clk_rst),
-
-        .s_axis_tready(sync_rx_data_tready),
-        .s_axis_tvalid(sync_rx_data_tvalid),
-        .s_axis_tdata (sync_rx_data_tdata),
-        .s_axis_tlast (sync_rx_data_tlast),
-        .s_axis_tkeep (sync_rx_data_tkeep),
-
-        .m_axis_tready(data_stream_tready),
-        .m_axis_tvalid(data_stream_tvalid),
-        .m_axis_tdata (data_stream_tdata),
-        .m_axis_tlast (data_stream_tlast),
-        .m_axis_tkeep (data_stream_tkeep)
+        .s_axis(sync_rx_data),
+        .m_axis(data_stream)
     );
 
     // --------------------------------------------------- //
     // ----------- FPGA-link protocol decoding ----------- //
     // --------------------------------------------------- //
 
-    wire                     tag_stream_tready;
-    wire                     tag_stream_tvalid;
-    wire [TC_DATA_WIDTH-1:0] tag_stream_tdata;
-    wire                     tag_stream_tlast;
-    wire [TC_KEEP_WIDTH-1:0] tag_stream_tkeep;
-    wire [             31:0] tag_stream_tuser;  // Contains wrap count
+    axis_interface #(
+        .DATA_WIDTH(TC_DATA_WIDTH)
+    ) tag_stream (
+        .clk(sys_clk),
+        .rst(sys_clk_rst)
+    );
 
     /* The si_data_channel module is responsible for extracting raw data and associated
    time information from Ethernet data, which includes various headers.
    */
     si_data_channel #(
-        .DATA_WIDTH_IN(DC_DATA_WIDTH),
-        .DATA_WIDTH_OUT(TC_DATA_WIDTH),
         .STATISTICS(1)
     ) data_channel (
-        .clk(sys_clk),
-        .rst(sys_clk_rst),
-
-        .s_axis_tready(data_stream_tready),
-        .s_axis_tvalid(data_stream_tvalid),
-        .s_axis_tdata (data_stream_tdata),
-        .s_axis_tlast (data_stream_tlast),
-        .s_axis_tkeep (data_stream_tkeep),
-
-        .m_axis_tready(tag_stream_tready),
-        .m_axis_tvalid(tag_stream_tvalid),
-        .m_axis_tdata (tag_stream_tdata),
-        .m_axis_tlast (tag_stream_tlast),
-        .m_axis_tkeep (tag_stream_tkeep),
-        .m_axis_tuser (tag_stream_tuser),
+        .s_axis(data_stream),
+        .m_axis(tag_stream),
 
         .wb_statistics(wb_array[statistics])
     );
@@ -467,18 +430,8 @@ module xem8320_reference_qsfp #(
    These timestamps are represented as 64 bits, and the resolution is 1/3 picoseconds.
    */
     axis_tag_interface #(.WORD_WIDTH(TC_WORD_WIDTH)) measurement_inp ();
-    si_tag_converter #(
-        .DATA_WIDTH_IN(TC_DATA_WIDTH)
-    ) converter (
-        .clk(sys_clk),
-        .rst(sys_clk_rst),
-        .s_axis_tvalid(tag_stream_tvalid),
-        .s_axis_tready(tag_stream_tready),
-        .s_axis_tdata(tag_stream_tdata),
-        .s_axis_tlast(tag_stream_tlast),
-        .s_axis_tkeep(tag_stream_tkeep),
-        .s_axis_tuser(tag_stream_tuser),
-
+    si_tag_converter converter (
+        .s_axis(tag_stream),
         .m_axis(measurement_inp)
     );
 

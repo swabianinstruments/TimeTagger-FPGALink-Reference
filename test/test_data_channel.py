@@ -138,12 +138,15 @@ def test_data_channel():
     axis_rtl_dir = top_dir / "3rdparty" / "verilog-ethernet" / "lib" / "axis" / "rtl"
 
     misc.cocotb_test(
-        dut="si_data_channel",
+        dut="data_channel_wrapper",
         test_module=Path(__file__).stem,
         verilog_sources=[
             hdl_dir / "header_parser.sv",
+            "data_channel_wrapper.sv",
             hdl_dir / "data_channel.sv",
             hdl_dir / "header_detacher.sv",
+            hdl_dir / "axis_interface.sv",
+            hdl_dir / "wishbone.sv",
             axis_rtl_dir / "axis_async_fifo.v",
             axis_rtl_dir / "axis_adapter.v",
         ],

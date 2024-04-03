@@ -1,5 +1,5 @@
 # How to Test
-You need to have iverilog installed
+You need to have verilator installed
 
 ``` sh
 python3 -m venv ./hdltestenv

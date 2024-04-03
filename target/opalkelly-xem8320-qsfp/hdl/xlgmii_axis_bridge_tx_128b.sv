@@ -24,8 +24,7 @@
 // verilog_format: on
 
 module xlgmii_axis_bridge_tx_128b (
-    input wire clk,
-    input wire rst,
+    axis_interface.slave axis,
 
     // Provide default (reset) values for xgmii_data and xgmii_ctrl,
     // as the cocotbext-eth testbench XgmiiSink expects signals to be
@@ -33,15 +32,15 @@ module xlgmii_axis_bridge_tx_128b (
     output reg [127:0] xgmii_data = {16{XGMII_IDLE}},
     output reg [ 15:0] xgmii_ctrl = 16'hFFFF,
 
-    // AXI stream can't be sparse and has to have a minimum length of 64 bytes
-    output reg          axis_tready,
-    input  wire         axis_tvalid,
-    input  wire [127:0] axis_tdata,
-    input  wire         axis_tlast,
-    input  wire [ 15:0] axis_tkeep,
-
     output reg error_tlast_tkeep
 );
+
+    initial begin
+        if (axis.DATA_WIDTH != 128) begin
+            $error("Error: axis.DATA_WIDTH needs to be 128 bits");
+            $finish;
+        end
+    end
 
     // --------- XGMII & Ethernet constants ----------
     localparam [7:0] XGMII_IDLE = 8'h07, XGMII_START = 8'hFB, XGMII_END = 8'hFD;
@@ -64,8 +63,8 @@ module xlgmii_axis_bridge_tx_128b (
     // Control signals for the interframe gap state.
     reg ifg_reset, ifg_add_double, ifg_add_single;
 
-    always @(posedge clk) begin
-        if (rst) begin
+    always @(posedge axis.clk) begin
+        if (axis.rst) begin
             // On reset it's fine to assume a full IFG was maintained.
             ifg_state <= 2;
         end else if (ifg_reset) begin
@@ -86,17 +85,17 @@ module xlgmii_axis_bridge_tx_128b (
     reg [ 7:0] prev_valid_tkeep;
     reg        prev_valid_tlast;
 
-    always @(posedge clk) begin
-        if (rst) begin
+    always @(posedge axis.clk) begin
+        if (axis.rst) begin
             prev_tvalid <= 0;
             prev_valid_tdata <= 0;
             prev_valid_tkeep <= 0;
             prev_valid_tlast <= 0;
-        end else if (axis_tvalid) begin
+        end else if (axis.tvalid) begin
             prev_tvalid <= 1;
-            prev_valid_tdata <= axis_tdata[127:64];
-            prev_valid_tkeep <= axis_tkeep[15:8];
-            prev_valid_tlast <= axis_tlast;
+            prev_valid_tdata <= axis.tdata[127:64];
+            prev_valid_tkeep <= axis.tkeep[15:8];
+            prev_valid_tlast <= axis.tlast;
         end else begin
             prev_tvalid <= 0;
         end
@@ -123,7 +122,7 @@ module xlgmii_axis_bridge_tx_128b (
         error_tlast_tkeep = 0;
 
         // We enforce a non-zero tkeep be asserted along tlast.
-        if (axis_tlast && (axis_tkeep == 0)) begin
+        if (axis.tlast && (axis.tkeep == 0)) begin
             error_tlast_tkeep = 1;
         end
 
@@ -135,7 +134,7 @@ module xlgmii_axis_bridge_tx_128b (
             // valid is constantly asserted during a single transmission.
 
             adjusted_tvalid = prev_tvalid;
-            adjusted_tdata  = {axis_tdata[63:0], prev_valid_tdata};
+            adjusted_tdata  = {axis.tdata[63:0], prev_valid_tdata};
 
             // Don't expose the upper tkeep (which might be asserted) when the
             // lower isn't fully asserted (end of transaction) or when last was
@@ -143,27 +142,27 @@ module xlgmii_axis_bridge_tx_128b (
             if ((prev_valid_tkeep != 8'hFF) || prev_valid_tlast) begin
                 adjusted_tkeep = {8'h00, prev_valid_tkeep};
             end else begin
-                adjusted_tkeep = {axis_tkeep[7:0], prev_valid_tkeep};
+                adjusted_tkeep = {axis.tkeep[7:0], prev_valid_tkeep};
             end
 
             // The adjusted sink should only be last when we have a
             // prev_valid_tkeep != 0xFF (meaning that at least some bytes aren't valid there)
-            // or the current axis_tkeep should be ignored now (because a last came previously and hasn't been fully transmitted)
-            // or the axis_tkeep[7:0] isn't 0xFF (not all bytes of the upper half are valid)
-            // or axis_tkeep[8] is 0 (the first byte exposed in the next cycle is not valid).
+            // or the current axis.tkeep should be ignored now (because a last came previously and hasn't been fully transmitted)
+            // or the axis.tkeep[7:0] isn't 0xFF (not all bytes of the upper half are valid)
+            // or axis.tkeep[8] is 0 (the first byte exposed in the next cycle is not valid).
             if ((prev_valid_tkeep != 8'hFF)
                 || fsm_mask_ready
-                || (axis_tkeep[7:0] != 8'hFF)
-                || (axis_tkeep[8] == 0)) begin
+                || (axis.tkeep[7:0] != 8'hFF)
+                || (axis.tkeep[8] == 0)) begin
                 adjusted_tlast = 1;
             end else begin
                 adjusted_tlast = 0;
             end
         end else begin
-            adjusted_tvalid = axis_tvalid;
-            adjusted_tdata  = axis_tdata;
-            adjusted_tkeep  = axis_tkeep;
-            adjusted_tlast  = axis_tlast;
+            adjusted_tvalid = axis.tvalid;
+            adjusted_tdata  = axis.tdata;
+            adjusted_tkeep  = axis.tkeep;
+            adjusted_tlast  = axis.tlast;
         end
     end
 
@@ -180,8 +179,8 @@ module xlgmii_axis_bridge_tx_128b (
     reg [ 15:0] xgmii_ctrl_next = 16'hFFFF;
 
 
-    always @(posedge clk) begin
-        if (rst) begin
+    always @(posedge axis.clk) begin
+        if (axis.rst) begin
             fsm_state_reg <= FSM_IDLE;
             fsm_end_transmission <= 0;
             fsm_mask_ready <= 0;
@@ -221,7 +220,7 @@ module xlgmii_axis_bridge_tx_128b (
         // signals)
         transmit_shifted_next = transmit_shifted;
         // Combinational AXI4-Stream sink ready feedback
-        axis_tready = 0;
+        axis.tready = 0;
         // XGMII output is produced in every branch below, use X to aid in
         // simulation. Should never propagate to output:
         xgmii_ctrl_next = {16{1'bx}};
@@ -229,7 +228,7 @@ module xlgmii_axis_bridge_tx_128b (
 
         case (fsm_state_reg)
             FSM_IDLE: begin
-                if (axis_tvalid && (ifg_state == 2)) begin
+                if (axis.tvalid && (ifg_state == 2)) begin
                     // Branch A: we've transmitted at least the full 12 bytes of
                     // IFG. This means that we can unconditionally start
                     // transmission on the first half.
@@ -239,17 +238,17 @@ module xlgmii_axis_bridge_tx_128b (
 
                     // Transmit the preamble and the first half.
                     xgmii_ctrl_next = 16'h0001;
-                    xgmii_data_next = {axis_tdata[63:0], ETH_PREAMBLE[63:8], XGMII_START};
+                    xgmii_data_next = {axis.tdata[63:0], ETH_PREAMBLE[63:8], XGMII_START};
 
                     // Latch data
-                    axis_tready = 1;
+                    axis.tready = 1;
 
                     // Indicate that we are in the shifted transmit state.
                     transmit_shifted_next = 1;
 
                     // Go to FSM_TRANSMIT state.
                     fsm_state_next = FSM_TRANSMIT;
-                end else if (axis_tvalid && (ifg_state == 1)) begin
+                end else if (axis.tvalid && (ifg_state == 1)) begin
                     // Branch B.2: we can't transmit on the first half as
                     // there haven't been sufficient IDLEs yet, but on the
                     // ninth.
@@ -301,7 +300,7 @@ module xlgmii_axis_bridge_tx_128b (
                 end else begin
                     // Accept the provided data. adjusted_tvalid is checked in
                     // the branch above.
-                    axis_tready = !fsm_mask_ready;
+                    axis.tready = !fsm_mask_ready;
 
                     // Set the XGMII bus word based on the adjusted tkeep
                     for (i = 0; i < 16; i = i + 1) begin
@@ -347,7 +346,7 @@ module xlgmii_axis_bridge_tx_128b (
                         // to IDLE state.
                         fsm_end_transmission_next = 0;
                         fsm_state_next = FSM_IDLE;
-                    end else if (axis_tlast) begin
+                    end else if (axis.tlast) begin
                         // This wasn't the last adjusted (shifted) word, but the
                         // last non-shifted AXI transaction. This means that the
                         // lower half of the next (shifted) word will contain the

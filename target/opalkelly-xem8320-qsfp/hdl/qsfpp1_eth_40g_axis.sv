@@ -39,22 +39,16 @@ module qsfpp1_eth_40g_axis (
     output wire [3:0] qsfpp_tx_n,
 
     // AXI4-Stream input (without preamble & FCS, IFG maintained internally)
-    output wire         axis_tx_clk,
-    output wire         axis_tx_rst,
-    output wire         axis_tx_tready,
-    input  wire         axis_tx_tvalid,
-    input  wire [127:0] axis_tx_tdata,
-    input  wire         axis_tx_tlast,
-    input  wire [ 31:0] axis_tx_tkeep,
+    output wire axis_tx_clk,
+    output wire axis_tx_rst,
+
+    axis_interface.slave axis_tx,
 
     // AXI4-Stream output (without preamble & FCS)
-    output wire         axis_rx_clk,
-    output wire         axis_rx_rst,
-    input  wire         axis_rx_tready,
-    output wire         axis_rx_tvalid,
-    output wire [127:0] axis_rx_tdata,
-    output wire         axis_rx_tlast,
-    output wire [ 15:0] axis_rx_tkeep,
+    output wire axis_rx_clk,
+    output wire axis_rx_rst,
+
+    axis_interface.master axis_rx,
 
     // Wishbone interface for control & status
     wb_interface.slave wb
@@ -162,9 +156,9 @@ module qsfpp1_eth_40g_axis (
     );
 
     assign axis_tx_clk = xlgmii_tx_clk;
-    assign axis_tx_rst = xlgmii_tx_rst;
+    assign axis_tx_rst = tx_reset | xlgmii_tx_rst;
     assign axis_rx_clk = xlgmii_rx_clk;
-    assign axis_rx_rst = xlgmii_rx_rst;
+    assign axis_rx_rst = rx_reset | xlgmii_rx_rst;
 
     wire [127:0] xlgmii_tx_data_int;
     wire [ 15:0] xlgmii_tx_ctrl_int;
@@ -390,27 +384,14 @@ module qsfpp1_eth_40g_axis (
     // ---------- XGMII TO AXI4-STREAM BRIDGE INSTANTIATION ----------
 
     xlgmii_axis_bridge bridge (
-        .rx_clk(xlgmii_rx_clk),
-        .rx_rst(rx_reset | xlgmii_rx_rst),
-        .tx_clk(xlgmii_tx_clk),
-        .tx_rst(tx_reset | xlgmii_tx_rst),
 
         .xlgmii_rx_data(xlgmii_rx_data),
         .xlgmii_rx_ctrl(xlgmii_rx_ctrl),
         .xlgmii_tx_data(xlgmii_tx_data_int),
         .xlgmii_tx_ctrl(xlgmii_tx_ctrl_int),
 
-        .axis_rx_tready(axis_rx_tready),
-        .axis_rx_tvalid(axis_rx_tvalid),
-        .axis_rx_tdata (axis_rx_tdata),
-        .axis_rx_tlast (axis_rx_tlast),
-        .axis_rx_tkeep (axis_rx_tkeep),
-
-        .axis_tx_tready(axis_tx_tready),
-        .axis_tx_tvalid(axis_tx_tvalid),
-        .axis_tx_tdata (axis_tx_tdata),
-        .axis_tx_tlast (axis_tx_tlast),
-        .axis_tx_tkeep (axis_tx_tkeep)
+        .axis_tx(axis_tx),
+        .axis_rx(axis_rx)
     );
 
     // ---------- WISHBONE STATUS & CONTROL LOGIC ----------

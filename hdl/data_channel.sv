@@ -23,152 +23,94 @@
 // verilog_format: on
 
 module si_data_channel #(
-    parameter DATA_WIDTH_IN = 128,
-    parameter KEEP_WIDTH_IN = (DATA_WIDTH_IN + 7) / 8,
-    parameter DATA_WIDTH_OUT = 32,
-    parameter KEEP_WIDTH_OUT = (DATA_WIDTH_OUT + 7) / 8,
     parameter STATISTICS = 0
 ) (
-    input wire clk,
-    input wire rst,
-
-    // Wishbone interface for statistics. Has addresses for 0-39
-`ifndef __ICARUS__
     wb_interface.slave wb_statistics,
-`endif
-
-    // Ethernet data *after* the MAC, without CRC or preamble, clk
-    input  wire                     s_axis_tvalid,
-    output wire                     s_axis_tready,
-    input  wire [DATA_WIDTH_IN-1:0] s_axis_tdata,
-    input  wire                     s_axis_tlast,
-    input  wire [KEEP_WIDTH_IN-1:0] s_axis_tkeep,
-
-    // Tag data clk
-    output wire                      m_axis_tvalid,
-    input  wire                      m_axis_tready,
-    output wire [DATA_WIDTH_OUT-1:0] m_axis_tdata,
-    output wire                      m_axis_tlast,
-    output wire [KEEP_WIDTH_OUT-1:0] m_axis_tkeep,
-    output wire [            32-1:0] m_axis_tuser    // Rollover time
-
+    axis_interface.slave s_axis,
+    axis_interface.master m_axis
 );
     initial begin
 
         // Some sanity checks:
 
         // - ensure that the input data-width is 128 bits, this is the only width supported by this module
-        if (DATA_WIDTH_IN != 128) begin
-            $error("Error: DATA_WIDTH_IN needs to be 128 bits");
+        if (s_axis.DATA_WIDTH != 128) begin
+            $error("Error: s_axis.DATA_WIDTH needs to be 128 bits");
             $finish;
         end
         // - ensure that the output data-width is a multiple of 32 bits, to not split tags
-        if ((DATA_WIDTH_OUT % 32) != 0) begin
-            $error("Error: DATA_WIDTH_OUT needs to be a multiple of 32 bits");
+        if ((m_axis.DATA_WIDTH % 32) != 0) begin
+            $error("Error: m_axis.DATA_WIDTH needs to be a multiple of 32 bits");
             $finish;
         end
     end
 
-    wire [DATA_WIDTH_IN-1:0] filtered_axis_tdata;
-    wire [KEEP_WIDTH_IN-1:0] filtered_axis_tkeep;
-    wire                     filtered_axis_tvalid;
-    wire                     filtered_axis_tready;
-    wire                     filtered_axis_tlast;
+    axis_interface #(.DATA_WIDTH(s_axis.DATA_WIDTH))
+        filtered_axis (
+            .clk(s_axis.clk),
+            .rst(s_axis.rst)
+        ),
+        unpacked_axis (
+            .clk(s_axis.clk),
+            .rst(s_axis.rst)
+        );
 
-    wire                     lost_packet;
-    wire                     invalid_packet;
+    wire lost_packet;
+    wire invalid_packet;
 
     // This component filters out invalid frames (or non-recognized ones, like ARP)
-    si_header_parser #(
-        .DATA_WIDTH(DATA_WIDTH_IN)
-    ) header_parser (
-        .clk(clk),
-        .rst(rst),
-
-        .s_axis_tvalid(s_axis_tvalid),
-        .s_axis_tready(s_axis_tready),
-        .s_axis_tdata (s_axis_tdata),
-        .s_axis_tlast (s_axis_tlast),
-        .s_axis_tkeep (s_axis_tkeep),
-
-        .m_axis_tvalid(filtered_axis_tvalid),
-        .m_axis_tready(filtered_axis_tready),
-        .m_axis_tdata (filtered_axis_tdata),
-        .m_axis_tlast (filtered_axis_tlast),
-        .m_axis_tkeep (filtered_axis_tkeep),
+    si_header_parser header_parser (
+        .s_axis(s_axis),
+        .m_axis(filtered_axis),
 
         .lost_packet(lost_packet),
         .invalid_packet(invalid_packet)
     );
 
-    wire [DATA_WIDTH_IN-1:0] unpacked_axis_tdata;
-    wire [KEEP_WIDTH_IN-1:0] unpacked_axis_tkeep;
-    wire                     unpacked_axis_tvalid;
-    wire                     unpacked_axis_tready;
-    wire                     unpacked_axis_tlast;
-    wire [           32-1:0] unpacked_axis_tuser;
+    si_header_detacher header_detacher (
 
-
-    si_header_detacher #(
-        .DATA_WIDTH(DATA_WIDTH_IN)
-    ) header_detacher (
-        .clk(clk),
-        .rst(rst),
-
-        .s_axis_tvalid(filtered_axis_tvalid),
-        .s_axis_tready(filtered_axis_tready),
-        .s_axis_tdata (filtered_axis_tdata),
-        .s_axis_tlast (filtered_axis_tlast),
-        .s_axis_tkeep (filtered_axis_tkeep),
-
-        .m_axis_tvalid(unpacked_axis_tvalid),
-        .m_axis_tready(unpacked_axis_tready),
-        .m_axis_tdata (unpacked_axis_tdata),
-        .m_axis_tlast (unpacked_axis_tlast),
-        .m_axis_tkeep (unpacked_axis_tkeep),
-        .m_axis_tuser (unpacked_axis_tuser)
+        .s_axis(filtered_axis),
+        .m_axis(unpacked_axis)
     );
-
 
     axis_adapter #(
-        .S_DATA_WIDTH(DATA_WIDTH_IN),
-        .M_DATA_WIDTH(DATA_WIDTH_OUT),
+        .S_DATA_WIDTH(s_axis.DATA_WIDTH),
+        .M_DATA_WIDTH(m_axis.DATA_WIDTH),
         .USER_WIDTH  (32)
     ) width_adpter (
-        .clk(clk),
-        .rst(rst),
+        .clk(unpacked_axis.clk),
+        .rst(unpacked_axis.rst),
 
-        .s_axis_tvalid(unpacked_axis_tvalid),
-        .s_axis_tready(unpacked_axis_tready),
-        .s_axis_tdata (unpacked_axis_tdata),
-        .s_axis_tlast (unpacked_axis_tlast),
-        .s_axis_tkeep (unpacked_axis_tkeep),
-        .s_axis_tuser (unpacked_axis_tuser),
+        .s_axis_tvalid(unpacked_axis.tvalid),
+        .s_axis_tready(unpacked_axis.tready),
+        .s_axis_tdata (unpacked_axis.tdata),
+        .s_axis_tlast (unpacked_axis.tlast),
+        .s_axis_tkeep (unpacked_axis.tkeep),
+        .s_axis_tuser (unpacked_axis.tuser),
 
-        .m_axis_tvalid(m_axis_tvalid),
-        .m_axis_tready(m_axis_tready),
-        .m_axis_tdata (m_axis_tdata),
-        .m_axis_tlast (m_axis_tlast),
-        .m_axis_tkeep (m_axis_tkeep),
-        .m_axis_tuser (m_axis_tuser)
+        .m_axis_tvalid(m_axis.tvalid),
+        .m_axis_tready(m_axis.tready),
+        .m_axis_tdata (m_axis.tdata),
+        .m_axis_tlast (m_axis.tlast),
+        .m_axis_tkeep (m_axis.tkeep),
+        .m_axis_tuser (m_axis.tuser)
     );
-
 
     generate
         if (STATISTICS == 1) begin
             si_statistics_wb #(
-                .DATA_WIDTH(DATA_WIDTH_IN)
+                .DATA_WIDTH(s_axis.DATA_WIDTH)
             ) statistics (
-                .clk(clk),
-                .rst(rst),
-                .pre_axis_tvalid(s_axis_tvalid),
-                .pre_axis_tready(s_axis_tready),
-                .pre_axis_tlast(s_axis_tlast),
-                .post_axis_tvalid(unpacked_axis_tvalid),
-                .post_axis_tdata(unpacked_axis_tdata),
-                .post_axis_tkeep(unpacked_axis_tkeep),
-                .post_axis_tready(unpacked_axis_tready),
-                .post_axis_tlast(unpacked_axis_tlast),
+                .clk(s_axis.clk),
+                .rst(s_axis.rst),
+                .pre_axis_tvalid(s_axis.tvalid),
+                .pre_axis_tready(s_axis.tready),
+                .pre_axis_tlast(s_axis.tlast),
+                .post_axis_tvalid(unpacked_axis.tvalid),
+                .post_axis_tdata(unpacked_axis.tdata),
+                .post_axis_tkeep(unpacked_axis.tkeep),
+                .post_axis_tready(unpacked_axis.tready),
+                .post_axis_tlast(unpacked_axis.tlast),
 
                 .lost_packet(lost_packet),
                 .invalid_packet(invalid_packet),
@@ -180,5 +122,3 @@ module si_data_channel #(
     endgenerate
 
 endmodule  // si_data_channel
-
-`resetall
