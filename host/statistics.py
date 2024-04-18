@@ -27,63 +27,69 @@ class Statistics:
     DIAGNOSTIC_FIELDS = {
         "packet_rate": {
             "val_addr": 12,
-            "div": 1,
+            "words": 1,
             "signed": False,
             "unit": "Packets/s",
         },
         "word_rate": {
             "val_addr": 16,
-            "div": 1,
+            "words": 1,
             "signed": False,
             "unit": "Words (128 bit)/s",
         },
         "tag_rate": {
-            "val_addr": 40,
-            "div": 1,
+            "val_addr": 52,
+            "words": 1,
             "signed": False,
             "unit": "Tags/s",
         },
         "received_packets": {
-            "val_addr": 20,
-            "div": 1,
+            "val_addr": 24,
+            "words": 2,
             "signed": False,
             "unit": "Packets",
         },
         "received_words": {
-            "val_addr": 24,
-            "div": 1,
+            "val_addr": 32,
+            "words": 2,
             "signed": False,
             "unit": "Words (128 bit)",
         },
         "received_tags": {
-            "val_addr": 44,
-            "div": 1,
+            "val_addr": 56,
+            "words": 2,
             "signed": False,
             "unit": "Tags",
         },
         "size_of_last_packet": {
-            "val_addr": 28,
-            "div": 1,
+            "val_addr": 40,
+            "words": 1,
             "signed": False,
             "unit": "Words (128 bit)/Packet",
         },
         "packet_loss": {
-            "val_addr": 32,
-            "div": 1,
-            "signed": False,
-            "unit": "bool",
-        },
-        "overflowed": {
-            "val_addr": 48,
-            "div": 1,
+            "val_addr": 44,
+            "words": 1,
             "signed": False,
             "unit": "bool",
         },
         "invalid_packets": {
-            "val_addr": 36,
-            "div": 1,
+            "val_addr": 48,
+            "words": 1,
             "signed": False,
             "unit": "Packets",
+        },
+        "overflowed": {
+            "val_addr": 64,
+            "words": 1,
+            "signed": False,
+            "unit": "int",
+        },
+        "missed_tags": {
+            "val_addr": 72,
+            "words": 2,
+            "signed": False,
+            "unit": "Tags",
         },
     }
 
@@ -92,6 +98,10 @@ class Statistics:
         self.wb = wb
         self.offset = offset
 
+        module_name = self.__read_wb_addr(0).to_bytes(4, 'big')
+        assert module_name == b'stat', ("Connected to a module other than Statistics. "
+                                        "Ensure that you have connected the correct Wishbone interface to your Statistics module inside the FPGA project.")
+
     def __read_wb_addr(self, addr):
         return self.wb.read(self.offset + addr)
 
@@ -99,7 +109,15 @@ class Statistics:
         assert diag in self.DIAGNOSTIC_FIELDS
         df = self.DIAGNOSTIC_FIELDS[diag]
 
-        val = self.__read_wb_addr(df["val_addr"])
+        if df["words"] == 2:
+            # Read the two consecutive addresses
+            val_low = self.__read_wb_addr(df["val_addr"])
+            val_high = self.__read_wb_addr(df["val_addr"] + 4)
+
+            # Combine the two 32-bit values into a single 64-bit value
+            val = (val_high << 32) | val_low
+        else:
+            val = self.__read_wb_addr(df["val_addr"])
 
         return {
             "val": val,
@@ -115,7 +133,7 @@ class Statistics:
         output += f"  {'':50} {'VAL':>8s} \n"
         for d in self.DIAGNOSTIC_FIELDS.keys():
             v = self.__get_diagnostic(d)
-            output += f"  {d:20} {'(' + v['unit'] + ')':>27} " + f": {v['val']:8} \n"
+            output += f"  {d:20} {'(' + v['unit'] + ')':>27} " + f": {v['val']:16} \n"
         print(output)
 
 

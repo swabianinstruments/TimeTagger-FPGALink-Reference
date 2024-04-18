@@ -113,13 +113,17 @@ si@ubuntu:target/opalkelly-xem8320/host$ python3 -m common.statistics
 Connected to device Opal Kelly XEM8320 with serial 0123456789!
 Diagnostics:
                                                           VAL
-  packet_rate                          (Packets/s) :   183095
-  word_rate                    (Words (128 bit)/s) :   549285
-  received_packets                       (Packets) :   876845
-  received_words                 (Words (128 bit)) :  2630819
-  size_of_last_packet     (Words (128 bit)/Packet) :        3
-  packet_loss                               (bool) :        0
-  invalid_packets                        (Packets) :        0
+  packet_rate                          (Packets/s) :           366212
+  word_rate                    (Words (128 bit)/s) :        148160066
+  tag_rate                                (Tags/s) :        592640264
+  received_packets                       (Packets) :        347321811
+  received_words                 (Words (128 bit)) :     140517303310
+  received_tags                             (Tags) :     562069718688
+  size_of_last_packet     (Words (128 bit)/Packet) :              248
+  packet_loss                               (bool) :                0
+  invalid_packets                        (Packets) :                0
+  overflowed                                 (int) :                0
+  missed_tags_in_TTX                        (Tags) :                0
 si@ubuntu:target/opalkelly-xem8320/host$ popd
 ```
 
