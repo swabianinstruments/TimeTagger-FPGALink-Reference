@@ -141,7 +141,7 @@ module histogram_wrapper #(
         .rst(reset_hist_module),
         .tagtime(tagtime),
         .channel(channel),
-        .valid_tag(s_axis.tvalid ? s_axis.tkeep : 0),
+        .valid_tag(s_axis.tvalid ? s_axis.tkeep : '0),
         .hist_read_start(hist_read_start),
         .hist_reset(hist_reset),
         .config_en(config_en),
@@ -419,13 +419,13 @@ module histogram_wrapper #(
 
             // calculating offset: ∑n*x(n) / ∑x(n)
             logic [WEIGHTED_SUM_WIDTH - 1 : 0] offset_quotient;
-            logic [SUM_WIDTH - 1 : 0] offset_reminder;
+            logic [SUM_WIDTH - 1 : 0] offset_remainder;
             logic offset_validout;
             logic [OFFSET_VALID_BUFF_WIDTH - 1 : 0] offset_validout_buff;
 
             // calculating variance
             logic [SQUARED_WEIGHTED_SUM_WIDTH : 0] variance_quotient;
-            logic [SUM_WIDTH - 1 : 0] variance_reminder;
+            logic [SUM_WIDTH - 1 : 0] variance_remainder;
             logic variance_validout;
 
             always @(posedge s_axis.clk) begin
@@ -493,7 +493,7 @@ module histogram_wrapper #(
 					   to or greater than half of data_sum_reg, the offset should be increased by one.
 					   This adjustment is necessary because the actual offset value is closer to the
 					   next integer value than the computed one. */
-                    if (offset_reminder >= (data_sum_reg >> 1))
+                    if (offset_remainder >= (data_sum_reg >> 1))
                         offset_reg <= offset_quotient[0+:HIST_MEM_ADDR_WIDTH] + 1;
                 end
                 /* To derive the offset value, it is essential to decrement the offset_reg value by one.
@@ -517,7 +517,7 @@ module histogram_wrapper #(
                 if (variance_validout) begin
                     variance <= variance_quotient[0+:VARIANCE_WIDTH];
                     // Rounding the variance to the nearest integer value
-                    if (variance_reminder >= (data_sum_reg >> 1)) variance <= variance_quotient[0+:VARIANCE_WIDTH] + 1;
+                    if (variance_remainder >= (data_sum_reg >> 1)) variance <= variance_quotient[0+:VARIANCE_WIDTH] + 1;
                 end
                 statistics_valid <= variance_validout;
 
@@ -547,16 +547,16 @@ module histogram_wrapper #(
             );
             // calculating offset: ∑n*x(n) / ∑x(n)
             wide_divider #(
-                .DIVIDENT_WIDTH(WEIGHTED_SUM_WIDTH),
+                .DIVIDEND_WIDTH(WEIGHTED_SUM_WIDTH),
                 .DIVISOR_WIDTH (SUM_WIDTH)
             ) calculating_offset (
-                .clk     (s_axis.clk),
-                .start   (start_offset_div),
-                .dividend(weighted_sum_reg),  // ∑n*x(n)
-                .divisor (data_sum_reg),      // ∑x(n)
-                .quotient(offset_quotient),
-                .reminder(offset_reminder),
-                .validout(offset_validout)
+                .clk      (s_axis.clk),
+                .start    (start_offset_div),
+                .dividend (weighted_sum_reg),  // ∑n*x(n)
+                .divisor  (data_sum_reg),      // ∑x(n)
+                .quotient (offset_quotient),
+                .remainder(offset_remainder),
+                .validout (offset_validout)
             );
 
             // calculating squared_offset*data_sum_reg
@@ -584,7 +584,7 @@ module histogram_wrapper #(
             );
             // calculating variance
             wide_divider #(
-                .DIVIDENT_WIDTH(SQUARED_WEIGHTED_SUM_WIDTH + 1),
+                .DIVIDEND_WIDTH(SQUARED_WEIGHTED_SUM_WIDTH + 1),
                 .DIVISOR_WIDTH (SUM_WIDTH)
             ) calculating_variance (
                 .clk(s_axis.clk),
@@ -592,7 +592,7 @@ module histogram_wrapper #(
                 .dividend(subtraction),  // (∑n*n*x(n) + N*offset*offset) - (offset*N*N + offset*N)
                 .divisor(data_sum_reg),  // ∑x(n)
                 .quotient(variance_quotient),
-                .reminder(variance_reminder),
+                .remainder(variance_remainder),
                 .validout(variance_validout)
             );
         end
