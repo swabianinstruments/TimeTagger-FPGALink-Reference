@@ -40,6 +40,18 @@ For detailed information on the usage and configuration of the modules, refer to
 - [Histogram Module Documentation](histogram.md)
 - [Counter Module Documentation](counter.md)
 
+## Simulation Features
+
+This project comprises a toolbox designed for convenient simulation of measurements. The [`tb_timeTagGenerator.sv`](./tb/tb_timeTagGenerator.sv) module encapsulates the complete functionality of the Time Tagger X and the recipient aspect of this reference design. Thus, the physical inputs of the Time Tagger can be simulated, for instance, using System Verilog delay statements. This facilitates rapid development of new measurements.
+
+All measurements can be simulated with a nearly realistic dataset:
+
+- The Histogram measurement is assessed through a fluorescence lifetime experiment.
+- The Counter measurement is assessed via a dynamic light scattering experiment.
+- The Combination measurement is assessed using a boson sampling experiment.
+
+For a simpler demonstration of how to utilize the simulation toolbox, please refer to [`tb_user_sample.sv`](./tb/tb_user_sample.sv).
+
 ## Getting started
 
 First up, clone the reference design repository:

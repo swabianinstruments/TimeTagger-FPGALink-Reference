@@ -199,6 +199,8 @@ If you plan to integrate your own modules into the reference design, it is stron
 
 Be sure to minimize alterations to the remainder of the reference design to facilitate seamless integration of future updates.
 
+We recommend testing any modifications to the measurements using an appropriate simulation testbench. Please utilize the [`tb_timeTagGenerator.sv`](./../../tb/tb_timeTagGenerator.sv) module to generate signals for the AXI-Stream of time tags.
+
 ### Defining FPGA Module Parameters for Wishbone Interface
 
 To effectively communicate with your FPGA modules from a PC via the Wishbone interface, it's crucial to properly define parameters within the [`ref_design_pkg.sv`](./../../hdl/ref_design_pkg.sv) file. The package inside this file, named `pkg_base_address`, houses the necessary parameters for connecting modules to the Wishbone interface. Note that you can refer to the predefined parameters for modules like `histogram.sv` or `counter.sv`, as well as the established connections with Wishbone interfaces.
