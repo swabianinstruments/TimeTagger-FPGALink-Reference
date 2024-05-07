@@ -146,10 +146,19 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
+set files [list \
+ "[file normalize "$origin_dir/tb/tb_combination_driver.sv"]"\
+ "[file normalize "$origin_dir/tb/tb_combinations_boson_sampling.sv"]"\
+ "[file normalize "$origin_dir/tb/tb_counter_DLS.sv"]"\
+ "[file normalize "$origin_dir/tb/tb_histogram_lifetime.sv"]"\
+ "[file normalize "$origin_dir/tb/tb_timeTagGenerator.sv"]"\
+ "[file normalize "$origin_dir/tb/tb_user_sample.sv"]"\
+]
+add_files -norecurse -fileset $obj $files
 
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
-set_property "top" "xem8320_reference" $obj
+set_property "top" "tb_user_sample" $obj
 set_property "transport_int_delay" "0" $obj
 set_property "transport_path_delay" "0" $obj
 set_property "xelab.nosort" "1" $obj
