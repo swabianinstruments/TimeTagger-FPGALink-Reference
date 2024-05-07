@@ -19,7 +19,7 @@ import numpy as np
 
 class Counter:
     MODULE_REG = 0
-    FIFP_DEPTH_REG = 4
+    FIFO_DEPTH_REG = 4
     NUM_OF_CHANNELS_REG = 8
     CHANNEL_LUT_DEPTH_REG = 12
     SET_CHANNELS_REG = 16
@@ -51,7 +51,7 @@ class Counter:
         self.reset_FPGA_module()
 
     def _get_fifo_depth(self):
-        return self.wb.read(self.base_address + self.FIFP_DEPTH_REG)
+        return self.wb.read(self.base_address + self.FIFO_DEPTH_REG)
 
     def _get_lut_channels_depth(self):
         return self.wb.read(self.base_address + self.CHANNEL_LUT_DEPTH_REG)
@@ -63,7 +63,7 @@ class Counter:
         self.wb.write(self.base_address + self.RESET_FPGA_MODULE_REG, 1)
 
         self.data_array = np.full((self.number_of_desired_channels, self.capture_size), np.nan)
-        self.remaning_counters_array = []
+        self.remaining_counters_array = []
 
     def start_measurement(self):
         self.wb.write(self.base_address + self.CONFIG_REG, 1)
@@ -150,7 +150,7 @@ class Counter:
             rd_data = np.array(self.wb.burst_read(self.base_address + self.READ_DATA_REG, chunk_size, 0))
             burst_read_data[updated_bins:updated_bins + chunk_size] = rd_data
 
-        concat_data = self.remaning_counters_array
+        concat_data = self.remaining_counters_array
 
         # Filter zero elements (dummy data)
         burst_read_data = burst_read_data[burst_read_data != 0]
@@ -168,7 +168,7 @@ class Counter:
 
         # Update arrays
         added_data = concat_data[0:added_data_len]
-        self.remaning_counters_array = concat_data[added_data_len:]
+        self.remaining_counters_array = concat_data[added_data_len:]
 
         # Handle the scenario where the number of missed samples for each channel
         # exceeds the specified self.capture_size.
