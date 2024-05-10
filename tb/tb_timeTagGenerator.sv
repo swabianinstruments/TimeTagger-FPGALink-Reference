@@ -70,29 +70,32 @@ module tb_timeTagGenerator #(
     endgenerate
 
     //This process will read out the stored events with system clock and it's output acts as input to the modules under test(sorted time tag, signed channel index)
-    assign m_time.tvalid = |m_time.tkeep;
     reg [m_time.WORD_WIDTH-1:0] rand_read;
 
     always @(posedge m_time.clk) begin
         if (m_time.rst) begin
-            m_time.tkeep   = 0;
-            m_time.tagtime = '{default: 'X};
-            m_time.channel = '{default: 'X};
+            m_time.tvalid <= 0;
+            m_time.tkeep <= 'X;
+            m_time.tagtime <= '{default: 'X};
+            m_time.channel <= '{default: 'X};
             m_time.lowest_time_bound <= 0;
         end else if (m_time.tready || !m_time.tvalid) begin
-            m_time.tkeep = 0;
-            m_time.tagtime = '{default: 'X};
-            m_time.channel = '{default: 'X};
+            m_time.tvalid  <= 0;
+            m_time.tkeep   <= 'X;
+            m_time.tagtime <= '{default: 'X};
+            m_time.channel <= '{default: 'X};
             rand_read = $urandom_range(0, 2 ** m_time.WORD_WIDTH - 1);
             if (data_count >= $countones(rand_read)) begin
+                m_time.tvalid <= 1;
+                m_time.tkeep  <= 0;
                 for (integer m = 0; m < m_time.WORD_WIDTH; m++) begin
                     if (rand_read[m] && data_count > 0) begin  // falling edge
-                        m_time.tagtime[m] = fifo[addr_rd][0+:m_time.TIME_WIDTH];
+                        m_time.tagtime[m] <= fifo[addr_rd][0+:m_time.TIME_WIDTH];
                         m_time.lowest_time_bound <= fifo[addr_rd][0+:m_time.TIME_WIDTH];
-                        m_time.channel[m] = fifo[addr_rd][m_time.TIME_WIDTH+:m_time.CHANNEL_WIDTH];
-                        m_time.tkeep[m]   = 1;
-                        addr_rd           = addr_rd + 1;
-                        data_count        = data_count - 1;
+                        m_time.channel[m] <= fifo[addr_rd][m_time.TIME_WIDTH+:m_time.CHANNEL_WIDTH];
+                        m_time.tkeep[m] <= 1;
+                        addr_rd    = addr_rd + 1;
+                        data_count = data_count - 1;
                     end
                 end
             end
