@@ -147,7 +147,6 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
 set files [list \
- "[file normalize "$origin_dir/tb/tb_combination_driver.sv"]"\
  "[file normalize "$origin_dir/tb/tb_combinations_boson_sampling.sv"]"\
  "[file normalize "$origin_dir/tb/tb_counter_DLS.sv"]"\
  "[file normalize "$origin_dir/tb/tb_histogram_lifetime.sv"]"\
