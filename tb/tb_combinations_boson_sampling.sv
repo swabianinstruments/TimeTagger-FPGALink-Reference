@@ -20,7 +20,7 @@
 
 module tb_combinations_boson_sampling #(
     parameter integer WORD_WIDTH = 4,   // Amount of events processed in parallel by the histogram
-    parameter integer DETECTORS  = 16,  // Amount of simulated single photon detectors
+    parameter integer DETECTORS  = 12,  // Amount of simulated single photon detectors
     parameter integer PHOTONS    = 6    // Amount of entangled photons generated at once
 ) ();
 
@@ -115,7 +115,8 @@ module tb_combinations_boson_sampling #(
     wb_interface wb ();
     combination_interface comb_tb ();
     tb_combination_driver #(
-        .WISHBONE_INTERFACE_EN(1)
+        .WISHBONE_INTERFACE_EN(1),
+        .CHANNELS(DETECTORS)
     ) tb_combination_driver_inst (
         .clk(axis_tags.clk),
         .rst(axis_tags.rst),

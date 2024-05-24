@@ -24,9 +24,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 module tb_combination_driver #(
     parameter WISHBONE_INTERFACE_EN = 1,
-    parameter CHANNELS_IN_WIDTH = $clog2(18 + 1) + 1,
-    parameter CHANNELS = 16,
-    parameter CHANNEL_WIDTH = 4
+    parameter CHANNELS = 16
 ) (
     input wire clk,
     input wire rst,
