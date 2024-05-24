@@ -30,7 +30,7 @@ import pkg_base_address::*;
 module xem8320_reference #(
     /* TC_WORD_WIDTH controls how many events are processed simultaneously by
     the tag converter and the modules that use its output, such as Histogram,
-    coincidence, and countrate. */
+    combination, and countrate. */
     parameter TC_WORD_WIDTH = 1
 
 ) (
@@ -453,7 +453,7 @@ module xem8320_reference #(
     // --------------------------------------------------- //
 
     /*The measurement module encompasses various components such as user_sample,
-      histogram, and coincidence. If you wish to incorporate your own measurement
+      histogram, and combination. If you wish to incorporate your own measurement
       module, it is highly recommended to include it within the measurement module.
       To achieve this, ensure that you handle all necessary Wishbone interfaces for
       your modules.
@@ -464,6 +464,7 @@ module xem8320_reference #(
         .wb_user_sample(wb_array[user_sample]),  // wb interface for user_sample module
         .wb_histogram(wb_array[histogram]),  // wb interface for histogram module
         .wb_counter(wb_array[counter]),  // wb interface for counter module
+        .wb_combination(wb_array[combination]),  // wb interface for combination
 
         //------------------------------------------//
         //---- add wb interface for your modules ----//

@@ -41,10 +41,10 @@ class Wishbone:
         assert min(len(self.cmd_buffer),
                    self.cmd_queue_output_size) <= self.MAX_FIFO_SIZE
 
-        self.xem.WriteToBlockPipeIn(self.ADDR_WBBRIDGE_IN, 16, self.cmd_buffer)
+        assert self.xem.WriteToBlockPipeIn(self.ADDR_WBBRIDGE_IN, 16, self.cmd_buffer) == len(self.cmd_buffer)
 
         res_sum = bytearray(self.cmd_queue_output_size)
-        self.xem.ReadFromBlockPipeOut(self.ADDR_WBBRIDGE_OUT, 16, res_sum)
+        assert self.xem.ReadFromBlockPipeOut(self.ADDR_WBBRIDGE_OUT, 16, res_sum) == len(res_sum)
 
         res_offset = 0
         first_exception = None

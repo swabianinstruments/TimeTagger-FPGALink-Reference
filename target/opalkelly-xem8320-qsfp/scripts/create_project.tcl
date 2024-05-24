@@ -62,6 +62,15 @@ set files [list \
  "[file normalize "$origin_dir/hdl/histogram/wide_mult.sv"]"\
  "[file normalize "$origin_dir/hdl/countrate.sv"]"\
  "[file normalize "$origin_dir/hdl/counter_wrapper.sv"]"\
+ "[file normalize "$origin_dir/hdl/combination/accumulator_pre_calculator.sv"]"\
+ "[file normalize "$origin_dir/hdl/combination/combination_accumulator.sv"]"\
+ "[file normalize "$origin_dir/hdl/combination/combination_extraction.sv"]"\
+ "[file normalize "$origin_dir/hdl/combination/combination_wrapper.sv"]"\
+ "[file normalize "$origin_dir/hdl/combination/filter_combination.sv"]"\
+ "[file normalize "$origin_dir/hdl/combination/lane_packing.sv"]"\
+ "[file normalize "$origin_dir/hdl/combination/lane_reduction.sv"]"\
+ "[file normalize "$origin_dir/hdl/combination/channel_selector.sv"]"\
+ "[file normalize "$origin_dir/hdl/combination/combination_interface.sv"]"\
  "[file normalize "$origin_dir/gen_srcs/eth_crc_128b_comb.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/sync_reset.v"]"\
  "[file normalize "$origin_dir/3rdparty/verilog-ethernet/lib/axis/rtl/axis_adapter.v"]"\
@@ -136,6 +145,7 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
 set files [list \
+ "[file normalize "$origin_dir/tb/tb_combination_driver.sv"]"\
  "[file normalize "$origin_dir/tb/tb_combinations_boson_sampling.sv"]"\
  "[file normalize "$origin_dir/tb/tb_counter_DLS.sv"]"\
  "[file normalize "$origin_dir/tb/tb_histogram_lifetime.sv"]"\

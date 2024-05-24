@@ -8,6 +8,7 @@
  *
  * Authors:
  * - 2024 Ehsan Jokar <ehsan@swabianinstruments.com>
+ * - 2024 Loghman Rahimzadeh <loghman@swabianinstruments.com>
  *
  * This file is provided under the terms and conditions of the BSD 3-Clause
  * license, accessible under https://opensource.org/licenses/BSD-3-Clause.
@@ -27,6 +28,7 @@ module measurement (
     wb_interface.slave wb_user_sample,
     wb_interface.slave wb_histogram,
     wb_interface.slave wb_counter,
+    wb_interface.slave wb_combination,
 
     //------------------------------------------//
     //-- connect wb interface to your modules --//
@@ -43,13 +45,13 @@ module measurement (
         .TIME_WIDTH(s_axis.TIME_WIDTH),
         .CHANNEL_WIDTH(s_axis.CHANNEL_WIDTH)
     )
-        m_axis_user_sample (), m_axis_histogram (), m_axis_counter ();
+        m_axis_user_sample (), m_axis_histogram (), m_axis_counter (), m_axis_combination ();
 
     axis_tag_broadcast #(
-        .FANOUT(3)
+        .FANOUT(4)
     ) axis_tag_broadcast_inst (
         .s_axis(s_axis),
-        .m_axis({m_axis_user_sample, m_axis_histogram, m_axis_counter})
+        .m_axis({m_axis_user_sample, m_axis_histogram, m_axis_counter, m_axis_combination})
     );
 
     // --------------------------------------------------- //
@@ -76,9 +78,9 @@ module measurement (
         .wb(wb_histogram),
 
         /*If you intend to process histogram data within the FPGA, set "WISHBONE_INTERFACE_EN"
-       to zero. Utilize the signals below to interface with this module. Refer to the
-       "histogram_wrapper" and "histogram" modules for guidance on transmitting
-       configuration data and receiving output data.*/
+           to zero. Utilize the signals below to interface with this module. Refer to the
+           "histogram_wrapper" and "histogram" modules for guidance on transmitting
+           configuration data and receiving output data.*/
         .hist_read_start_i(),
         .hist_reset_i(),
         .config_en_i(),
@@ -107,7 +109,7 @@ module measurement (
 
         .wb(wb_counter),
         /*If you intend to process counter data within the FPGA , set "WISHBONE_INTERFACE_EN"
-     to zero. Utilize the signals below to interface with this module.*/
+         to zero. Utilize the signals below to interface with this module.*/
         .window_size_i(),
         .start_counting_i(),
         .reset_module_i(),
@@ -115,6 +117,51 @@ module measurement (
         .count_data_o(),
         .count_valid_o()
     );
+
+    // --------------------------------------------------- //
+    // ------------------ Combinations ------------------- //
+    // --------------------------------------------------- //
+    localparam NUM_OF_CHANNELS = 16;
+    localparam ACC_WIDTH = 32;
+    localparam COMB_FIFO_DEPTH = 8192;
+
+    combination_interface #(
+        .TIME_WIDTH(m_axis_combination.TIME_WIDTH),
+        .CHANNELS_IN_WIDTH(m_axis_combination.CHANNEL_WIDTH),
+        .CHANNELS(NUM_OF_CHANNELS),
+        .ACC_WIDTH(ACC_WIDTH)
+    ) m_comb_i ();
+
+
+    assign m_comb_i.ready_i = 0;
+    assign m_comb_i.window = 0;
+    assign m_comb_i.filter_max = 0;
+    assign m_comb_i.filter_min = 0;
+    assign m_comb_i.capture_enable = 0;
+    assign m_comb_i.start_reading = 0;
+    assign m_comb_i.select_comb_fifo = 0;
+    assign m_comb_i.reset_comb = 0;
+    assign m_comb_i.lut_WrRd = 0;
+    assign m_comb_i.lut_addr = 0;
+    assign m_comb_i.lut_dat_i = 0;
+
+    combination_wrapper #(
+        .WISHBONE_INTERFACE_EN(1),
+        .HISTOGRAM_EN(1),
+        .NUM_OF_CHANNELS(NUM_OF_CHANNELS),
+        .ACC_WIDTH(ACC_WIDTH),
+        .FIFO_DEPTH(COMB_FIFO_DEPTH)
+    ) combination_wrapper_inst (
+        // input information of channel
+        .s_time(m_axis_combination),
+
+        // Wishbone interface for control & status //
+        .wb(wb_combination),
+
+        // configuration and readout form combination when no wishbone is instantiated in bitfile generation(standalone)
+        .s_comb_i(m_comb_i.slave)
+    );
+
     // --------------------------------------------------- //
     // -------------- ADD YOUR MODULES HERE -------------- //
     // --------------------------------------------------- //
