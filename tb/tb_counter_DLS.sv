@@ -136,10 +136,10 @@ module tb_counter_DLS #(
     wire [31 : 0] count_data_o[DETECTORS];
     wire count_valid_o;
 
-    counter_wrapper #(
+    counter #(
         .WISHBONE_INTERFACE_EN(0),
         .NUM_OF_CHANNELS(DETECTORS)
-    ) counter_wrapper_inst (
+    ) counter_inst (
         .s_axis(axis_tags),
         .wb(wb),
         .window_size_i(64'd1000000),  // 1 us binwidth

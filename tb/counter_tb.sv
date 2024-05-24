@@ -1,5 +1,5 @@
 /**
- * Testbench for the countrate module
+ * Testbench for the counter module
  *
  * This file is part of the Time Tagger software defined digital data
  * acquisition FPGA-link reference design.
@@ -21,7 +21,7 @@
  `default_nettype none
 // verilog_format: on
 
-module countrate_tb;
+module counter_tb;
     // (* dont_touch="true" *)
     // Parameters
     localparam TAG_WIDTH = 64;
@@ -51,7 +51,7 @@ module countrate_tb;
     wire [COUNTER_WIDTH - 1 : 0] count_data[NUM_OF_CHANNELS];
     wire count_valid;
 
-    countrate #(
+    counter_impl #(
         .TAG_WIDTH(TAG_WIDTH),
         .NUM_OF_TAGS(NUM_OF_TAGS),
         .CHANNEL_WIDTH(CHANNEL_WIDTH),
@@ -59,7 +59,7 @@ module countrate_tb;
         .NUM_OF_CHANNELS(NUM_OF_CHANNELS),
         .COUNTER_WIDTH(COUNTER_WIDTH),
         .INPUT_FIFO_DEPTH(INPUT_FIFO_DEPTH)
-    ) countrate_inst (
+    ) counter_impl_inst (
         .clk(clk),
         .rst(rst),
         .valid_tag(valid_tag),

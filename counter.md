@@ -10,7 +10,7 @@ Interaction with the counter module within the FPGA can be achieved through two 
 During bitstream generation, only one of these options is synthesized. It's important to note that, for the provided bitstreams, access to the counter is available through the Python script. If your intention is to process the counter data inside the PC, you should do it using the provided Python class, which will be discussed in the following sections.
 
 
-On the other hand, if your goal is to process the counter data within the FPGA, you should set the `WISHBONE_INTERFACE_EN` parameter of [`counter_wrapper.sv`](./hdl/counter_wrapper.sv) to **zero** during the instantiation. You should also transmit the appropriate configuration from your module to the counter module. For further information on how to interface with the module, please refer to the detailed information provided inside the [`countrate.sv`](./hdl/countrate.sv) and [`counter_wrapper.sv`](./hdl/counter_wrapper.sv) files.
+On the other hand, if your goal is to process the counter data within the FPGA, you should set the `WISHBONE_INTERFACE_EN` parameter of [`counter.sv`](./hdl/counter.sv) to **zero** during the instantiation. You should also transmit the appropriate configuration from your module to the counter module. For further information on how to interface with the module, please refer to the detailed information provided inside the [`counter_impl.sv`](./hdl/counter_impl.sv) and [`counter.sv`](./hdl/counter.sv) files.
 
 The following sections will guide you through interacting with the FPGA counter module using the dedicated class.
 

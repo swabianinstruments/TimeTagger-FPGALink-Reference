@@ -125,12 +125,12 @@ module tb_combinations_boson_sampling #(
     );
 
     // The combination measurement
-    combination_wrapper #(
+    combination #(
         .WISHBONE_INTERFACE_EN(1),
         .NUM_OF_CHANNELS(DETECTORS),
         .ACC_WIDTH(32),
         .FIFO_DEPTH(8192)
-    ) combination_wrapper_inst (
+    ) combination_inst (
         // input information of channel
         .s_time(axis_tags),
         // Wishbone interface for control & status

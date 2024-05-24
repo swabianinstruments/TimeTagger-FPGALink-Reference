@@ -137,9 +137,9 @@ module tb_histogram_lifetime #(
     wire [12 - 1 : 0] offset;
     wire [32 - 1 : 0] variance;
 
-    histogram_wrapper #(
+    histogram #(
         .WISHBONE_INTERFACE_EN(0)
-    ) histogram_wrapper_inst (
+    ) histogram_inst (
         .s_axis(axis_tags),
         .wb(wb),
 

@@ -55,17 +55,17 @@ set files [list \
  "[file normalize "$origin_dir/hdl/ref_design_pkg.sv"]"\
  "[file normalize "$origin_dir/hdl/wishbone.sv"]"\
  "[file normalize "$origin_dir/hdl/measurement.sv"]"\
- "[file normalize "$origin_dir/hdl/histogram/histogram_wrapper.sv"]"\
  "[file normalize "$origin_dir/hdl/histogram/histogram.sv"]"\
+ "[file normalize "$origin_dir/hdl/histogram/histogram_impl.sv"]"\
  "[file normalize "$origin_dir/hdl/histogram/Hist_1lane.sv"]"\
  "[file normalize "$origin_dir/hdl/histogram/wide_divider.sv"]"\
  "[file normalize "$origin_dir/hdl/histogram/wide_mult.sv"]"\
- "[file normalize "$origin_dir/hdl/countrate.sv"]"\
- "[file normalize "$origin_dir/hdl/counter_wrapper.sv"]"\
+ "[file normalize "$origin_dir/hdl/counter_impl.sv"]"\
+ "[file normalize "$origin_dir/hdl/counter.sv"]"\
  "[file normalize "$origin_dir/hdl/combination/accumulator_pre_calculator.sv"]"\
  "[file normalize "$origin_dir/hdl/combination/combination_accumulator.sv"]"\
  "[file normalize "$origin_dir/hdl/combination/combination_extraction.sv"]"\
- "[file normalize "$origin_dir/hdl/combination/combination_wrapper.sv"]"\
+ "[file normalize "$origin_dir/hdl/combination/combination.sv"]"\
  "[file normalize "$origin_dir/hdl/combination/filter_combination.sv"]"\
  "[file normalize "$origin_dir/hdl/combination/lane_packing.sv"]"\
  "[file normalize "$origin_dir/hdl/combination/lane_reduction.sv"]"\
