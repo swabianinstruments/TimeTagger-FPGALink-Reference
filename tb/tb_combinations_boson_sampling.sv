@@ -111,8 +111,17 @@ module tb_combinations_boson_sampling #(
         window:     50 ps
     */
 
-    /*
-    wb_interface wb_tb ();
+    // Wishbone driver and combination tester
+    wb_interface wb ();
+    combination_interface comb_tb ();
+    tb_combination_driver #(
+        .WISHBONE_INTERFACE_EN(1)
+    ) tb_combination_driver_inst (
+        .clk(axis_tags.clk),
+        .rst(axis_tags.rst),
+        .wb(wb),
+        .m_comb_tb(comb_tb)
+    );
 
     // The combination measurement
     combination_wrapper #(
@@ -124,11 +133,9 @@ module tb_combinations_boson_sampling #(
         // input information of channel
         .s_time(axis_tags),
         // Wishbone interface for control & status
-        .wb(wb_tb),
+        .wb(wb),
         // combination interface for control & status
         .s_comb_i(comb_tb)
     );
-*/
-    assign axis_tags.tready = 1;
 
 endmodule

@@ -40,6 +40,40 @@ interface wb_interface #(
 
     modport slave(input clk, rst, adr, dat_i, we, stb, cyc, output dat_o, ack);
 
+`ifndef VERILATOR
+    // Simulation-only task to generate read & write commands
+    task write(input [ADDRESS_WIDTH-1:0] _adr, input [DATA_WIDTH-1:0] _dat_i);
+        wait (ack == 0);
+        adr <= _adr;
+        we <= 1;
+        dat_i <= _dat_i;
+        cyc <= 1;
+        stb <= 1;
+        wait (ack == 1);
+        @(posedge clk);
+        cyc <= 0;
+        stb <= 0;
+        adr <= 'X;
+        we <= 'X;
+        dat_i <= 'X;
+    endtask
+
+    task read(input [ADDRESS_WIDTH-1:0] _adr, output [DATA_WIDTH-1:0] _dat_o);
+        wait (ack == 0);
+        adr <= _adr;
+        we  <= 0;
+        cyc <= 1;
+        stb <= 1;
+        wait (ack == 1);
+        _dat_o <= dat_o;
+        @(posedge clk);
+        cyc <= 0;
+        stb <= 0;
+        adr <= 'X;
+        we  <= 'X;
+    endtask
+`endif
+
 endinterface
 
 module wb_interconnect #(

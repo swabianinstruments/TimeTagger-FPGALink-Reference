@@ -54,6 +54,9 @@ package pkg_base_address;
     localparam base_address_counter = 32'h80006500;
     localparam memory_size_counter = DEFAULT_DEPTH;
 
+    localparam base_address_combination = 32'h80007000;
+    localparam memory_size_combination = DEFAULT_DEPTH;
+
     enum {
         top_module,
         i2c_master,
@@ -61,7 +64,8 @@ package pkg_base_address;
         statistics,
         user_sample,
         histogram,
-        counter
+        counter,
+        combination
     } wb_instances;
 
     localparam WB_SIZE = wb_instances.num();
@@ -73,7 +77,8 @@ package pkg_base_address;
         base_address_statistics,
         base_address_user_design,
         base_address_histogram,
-        base_address_counter
+        base_address_counter,
+        base_address_combination
     };
 
     localparam integer memory_space[WB_SIZE] = '{
@@ -83,7 +88,8 @@ package pkg_base_address;
         memory_size_statistics,
         memory_size_user_design,
         memory_size_histogram,
-        memory_size_counter
+        memory_size_counter,
+        memory_size_combination
     };
 
 endpackage

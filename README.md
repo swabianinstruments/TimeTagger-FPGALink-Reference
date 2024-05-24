@@ -35,10 +35,15 @@ The Histogram module enables the processing of time tags received from the Time 
 
 The Counter module is designed to measure the number of tags received in each channel continuously. Time Tagger X, equipped with multiple input channels, detects events on each channel independently. The event times are then organized into time tags and transmitted to the FPGA module containing the Counter module. This module reports the number of tags for each channel within defined intervals, offering a quantitative measure of event occurrences over time. This periodic information is valuable for understanding the activity levels in individual channels.
 
+### Combinations
+
+The Combinations module extracts combinations from received time tags from the Time Tagger X. A combination is defined as a group of virtual channels that have events within a specific time window, with no events occurring in the same window size before the first event and after the last event of this combination. The user can access either the combinations or the corresponding calculated histogram.
+
 For detailed information on the usage and configuration of the modules, refer to the their documentation:
 
 - [Histogram Module Documentation](histogram.md)
 - [Counter Module Documentation](counter.md)
+- [Combinations Module Documentation](combinations.md)
 
 ## Simulation Features
 
@@ -57,7 +62,7 @@ For a simpler demonstration of how to utilize the simulation toolbox, please ref
 First up, clone the reference design repository:
 
 ``` sh
-$ git clone --recursive https://github.com/swabianinstruments/TimeTagger-FPGALink-Reference.git
+git clone --recursive https://github.com/swabianinstruments/TimeTagger-FPGALink-Reference.git
 ```
 
 We recommend using the OpalKelly XEM8320 for development. Please follow the direction in the
@@ -66,6 +71,7 @@ We recommend using the OpalKelly XEM8320 for development. Please follow the dire
 ## Roadmap
 
 This repository contains a work-in-progress, we're planning on implementing the following functionality:
+
 - Retransmission support for recovering from packet losses, storing partial packets in the attached DDR3 RAM
 - Softcore for IP management and various other tasks
 
