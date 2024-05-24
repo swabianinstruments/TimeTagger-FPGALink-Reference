@@ -18,23 +18,24 @@ import numpy as np
 
 
 class Counter:
-    MODULE_REG = 0
-    FIFO_DEPTH_REG = 4
-    NUM_OF_CHANNELS_REG = 8
-    CHANNEL_LUT_DEPTH_REG = 12
-    SET_CHANNELS_REG = 16
-    WINDOW_SIZE_LSB_REG = 24
-    WINDOW_SIZE_MSB_REG = 28
-    CONFIG_REG = 32
-    READ_DATA_REG = 36
-    RESET_FPGA_MODULE_REG = 40
-    NUM_DESIRED_CHANNEL_REG = 44
+    class Reg(IntEnum):
+        MODULE = 0
+        FIFO_DEPTH = 4
+        NUM_OF_CHANNELS = 8
+        CHANNEL_LUT_DEPTH = 12
+        SET_CHANNELS = 16
+        WINDOW_SIZE_LSB = 24
+        WINDOW_SIZE_MSB = 28
+        CONFIG = 32
+        READ_DATA = 36
+        RESET_FPGA_MODULE = 40
+        NUM_DESIRED_CHANNEL = 44
 
     def __init__(self, wb: Wishbone, capture_size=10000, base_address=0x80006500):
         self.wb = wb
         self.base_address = base_address
 
-        module_name = self.wb.read(self.base_address + self.MODULE_REG).to_bytes(4, 'big')
+        module_name = self.wb.read(self.base_address + self.Reg.MODULE).to_bytes(4, 'big')
         assert module_name == b'cntr', ("Connected to a module other than Counter. "
                                         "Ensure that you have connected the correct Wishbone interface to your Counter module inside the FPGA project.")
 
@@ -51,22 +52,22 @@ class Counter:
         self.reset_FPGA_module()
 
     def _get_fifo_depth(self):
-        return self.wb.read(self.base_address + self.FIFO_DEPTH_REG)
+        return self.wb.read(self.base_address + self.Reg.FIFO_DEPTH)
 
     def _get_lut_channels_depth(self):
-        return self.wb.read(self.base_address + self.CHANNEL_LUT_DEPTH_REG)
+        return self.wb.read(self.base_address + self.Reg.CHANNEL_LUT_DEPTH)
 
     def _get_number_of_channels(self):
-        return self.wb.read(self.base_address + self.NUM_OF_CHANNELS_REG)
+        return self.wb.read(self.base_address + self.Reg.NUM_OF_CHANNELS)
 
     def reset_FPGA_module(self):
-        self.wb.write(self.base_address + self.RESET_FPGA_MODULE_REG, 1)
+        self.wb.write(self.base_address + self.Reg.RESET_FPGA_MODULE, 1)
 
         self.data_array = np.full((self.number_of_desired_channels, self.capture_size), np.nan)
         self.remaining_counters_array = []
 
     def start_measurement(self):
-        self.wb.write(self.base_address + self.CONFIG_REG, 1)
+        self.wb.write(self.base_address + self.Reg.CONFIG, 1)
 
     def _assign_channel_indices(self, input_dict):
 
@@ -110,8 +111,8 @@ class Counter:
         # Reset FPGA Counter module
         self.reset_FPGA_module()
 
-        self.wb.write(self.base_address + self.NUM_DESIRED_CHANNEL_REG, self.number_of_desired_channels)
-        self.wb.burst_write(self.base_address + self.SET_CHANNELS_REG, ch, 0)
+        self.wb.write(self.base_address + self.Reg.NUM_DESIRED_CHANNEL, self.number_of_desired_channels)
+        self.wb.burst_write(self.base_address + self.Reg.SET_CHANNELS, ch, 0)
 
     def get_lut_channels(self):
         def list_to_dict(input_list):
@@ -124,7 +125,7 @@ class Counter:
                         result_dict[value] = [index]
             return dict(sorted(result_dict.items()))
 
-        read_list = self.wb.burst_read(self.base_address + self.SET_CHANNELS_REG, self.lut_channels_depth, 0)
+        read_list = self.wb.burst_read(self.base_address + self.Reg.SET_CHANNELS, self.lut_channels_depth, 0)
         return list_to_dict(read_list)
 
     def set_window_size(self, window_size: int = 3000000000):  # 1ms by default
@@ -132,12 +133,12 @@ class Counter:
         lsb = window_size & lsb_mask
         msb = (window_size >> 32) & lsb_mask
 
-        self.wb.write(self.base_address + self.WINDOW_SIZE_LSB_REG, lsb)
-        self.wb.write(self.base_address + self.WINDOW_SIZE_MSB_REG, msb)
+        self.wb.write(self.base_address + self.Reg.WINDOW_SIZE_LSB, lsb)
+        self.wb.write(self.base_address + self.Reg.WINDOW_SIZE_MSB, msb)
 
     def get_window_size(self):
-        lsb = self.wb.read(self.base_address + self.WINDOW_SIZE_LSB_REG)
-        msb = self.wb.read(self.base_address + self.WINDOW_SIZE_MSB_REG)
+        lsb = self.wb.read(self.base_address + self.Reg.WINDOW_SIZE_LSB)
+        msb = self.wb.read(self.base_address + self.Reg.WINDOW_SIZE_MSB)
         return (lsb + (msb << 32))
 
     def read_data(self):
@@ -147,7 +148,7 @@ class Counter:
             # Determine the current chunk size
             chunk_size = min(self.wb.MAX_BURST_SIZE, self.read_length - updated_bins)
             # Perform burst read for the current chunk
-            rd_data = np.array(self.wb.burst_read(self.base_address + self.READ_DATA_REG, chunk_size, 0))
+            rd_data = np.array(self.wb.burst_read(self.base_address + self.Reg.READ_DATA, chunk_size, 0))
             burst_read_data[updated_bins:updated_bins + chunk_size] = rd_data
 
         concat_data = self.remaining_counters_array
