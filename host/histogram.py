@@ -15,6 +15,7 @@
 
 from .ok_wishbone import Wishbone
 import numpy as np
+from enum import IntEnum
 
 
 class Histogram:
@@ -69,33 +70,48 @@ class Histogram:
         self.wb.write(self.base_address + self.Reg.CONFIG, wt_data)
         self.set_config_flag = 1
         # reset data_array for new measurement
-        self.data_array = np.zeros(self.number_of_bins)
+        self.data_array = np.zeros(self.number_of_bins, dtype=np.uint64)
 
     def read_data(self, reset=False):
-
         # Check whether the config has been set
-        if (self.set_config_flag):
-            wt_data = 3 if reset else 1
-            # send the read request
-            self.wb.write(self.base_address + self.Reg.READ_RESET_REQ, wt_data)
+        assert self.set_config_flag, "No data is available to read. Please first set the start and click channels using set_config function to start the measurement."
 
-            # Read in chunks until all data is retrieved
-            for updated_bins in range(0, self.number_of_bins, self.wb.MAX_BURST_SIZE):
-                # Determine the current chunk size
-                chunk_size = min(self.wb.MAX_BURST_SIZE, self.number_of_bins - updated_bins)
-                # Perform burst read for the current chunk
-                rd_data = np.array(
-                    self.wb.burst_read(
-                        self.base_address +
-                        self.Reg.READ_DATA,
-                        chunk_size,
-                        0),
-                    dtype=np.uint32)
-                self.data_array[updated_bins:updated_bins + chunk_size] += rd_data
+        # send the read request
+        wt_data = 3 if reset else 1
+        self.wb.write(self.base_address + self.Reg.READ_RESET_REQ, wt_data)
 
-            if reset:
-                self.set_config_flag = 0
-                self.prev_data_array = self.data_array
+        # Read in chunks until all data is retrieved
+        for updated_bins in range(0, self.number_of_bins, self.wb.MAX_BURST_SIZE):
+            # Determine the current chunk size
+            chunk_size = min(self.wb.MAX_BURST_SIZE, self.number_of_bins - updated_bins)
+            # Perform burst read for the current chunk
+            rd_data = np.array(self.wb.burst_read(
+                self.base_address +
+                self.Reg.READ_DATA,
+                chunk_size,
+                0), dtype=np.uint32)
+            self.data_array[updated_bins:updated_bins + chunk_size] += rd_data
 
-        else:
-            print("Warning: No data is available to read. Please first set the start and click channels using set_config function to start the measurement.")
+        if reset:
+            self.set_config_flag = 0
+            self.prev_data_array = self.data_array
+
+        return self.data_array
+
+
+if __name__ == '__main__':
+    import ok
+    import matplotlib.pylab as plt
+
+    xem = ok.FrontPanel()
+    xem.OpenBySerial()
+
+    wb = Wishbone(xem)
+    histogram = Histogram(wb)
+
+    histogram.set_config(start_channel=1, click_channel=2, shift=5)  # shift=5, so roughly 10ps bin width
+
+    while True:
+        plt.clf()
+        plt.plot(histogram.read_data())
+        plt.pause(1)

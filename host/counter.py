@@ -15,6 +15,7 @@
 
 from .ok_wishbone import Wishbone
 import numpy as np
+from enum import IntEnum
 
 
 class Counter:
@@ -78,12 +79,13 @@ class Counter:
             raise ValueError("Keys must be in the range from 0 to the number of desired channels minus one.")
 
         for channel_key, values in input_dict.items():
-            assert 0 <= channel_key < self.number_of_channels, f"Channel key {channel_key} must be in the range [0, {self.number_of_channels})."
+            assert 0 <= channel_key < self.number_of_channels, f"Channel key {
+                channel_key} must be in the range[0, {self.number_of_channels})."
 
             def process_value(val):
 
-                assert result_list[val &
-                                   0b111111] == self.number_of_channels, f"Repeated value {val} found in the dictionary. Please ensure no repeated channel values."
+                assert result_list[val & 0b111111] == self.number_of_channels, f"Repeated value {
+                    val} found in the dictionary. Please ensure no repeated channel values."
 
                 result_list[val & 0b111111] = channel_key
 
@@ -100,13 +102,10 @@ class Counter:
     # example: {0: 1, 1: [2,3], 2:[-4,4]}
     def set_lut_channels(self, channels=None):
         if channels is None:
-            ch = [
-                (i -
-                 1) if 0 < i <= self.number_of_channels else self.number_of_channels for i in range(
-                    self.lut_channels_depth)]
-            self.number_of_desired_channels = self.number_of_channels
-        else:
-            ch, self.number_of_desired_channels = self._assign_channel_indices(channels)
+            # By default, just pick the first physical inputs
+            channels = {i: i + 1 for i in range(self.number_of_channels)}
+
+        ch, self.number_of_desired_channels = self._assign_channel_indices(channels)
 
         # Reset FPGA Counter module
         self.reset_FPGA_module()
@@ -119,16 +118,14 @@ class Counter:
             result_dict = {}
             for index, value in enumerate(input_list):
                 if value < self.number_of_channels:
-                    if value in result_dict:
-                        result_dict[value].append(index)
-                    else:
-                        result_dict[value] = [index]
+                    result_dict.setdefault(value, []).append(index)
             return dict(sorted(result_dict.items()))
 
         read_list = self.wb.burst_read(self.base_address + self.Reg.SET_CHANNELS, self.lut_channels_depth, 0)
         return list_to_dict(read_list)
 
     def set_window_size(self, window_size: int = 3000000000):  # 1ms by default
+        window_size = int(window_size)
         lsb_mask = 0xFFFFFFFF
         lsb = window_size & lsb_mask
         msb = (window_size >> 32) & lsb_mask
@@ -139,7 +136,7 @@ class Counter:
     def get_window_size(self):
         lsb = self.wb.read(self.base_address + self.Reg.WINDOW_SIZE_LSB)
         msb = self.wb.read(self.base_address + self.Reg.WINDOW_SIZE_MSB)
-        return (lsb + (msb << 32))
+        return lsb + (msb << 32)
 
     def read_data(self):
         burst_read_data = np.zeros(self.read_length, dtype=np.uint32)
@@ -148,7 +145,7 @@ class Counter:
             # Determine the current chunk size
             chunk_size = min(self.wb.MAX_BURST_SIZE, self.read_length - updated_bins)
             # Perform burst read for the current chunk
-            rd_data = np.array(self.wb.burst_read(self.base_address + self.Reg.READ_DATA, chunk_size, 0))
+            rd_data = self.wb.burst_read(self.base_address + self.Reg.READ_DATA, chunk_size, 0)
             burst_read_data[updated_bins:updated_bins + chunk_size] = rd_data
 
         concat_data = self.remaining_counters_array
@@ -181,23 +178,32 @@ class Counter:
         self.data_array = np.concatenate((self.data_array[:, added_arrays_len:], np.reshape(
             added_data, (added_arrays_len, self.number_of_desired_channels)).T), axis=1)
 
+        return self.data_array
+
 
 if __name__ == '__main__':
-
     import ok
+    import matplotlib.pylab as plt
 
     xem = ok.FrontPanel()
     xem.OpenBySerial()
 
     wb = Wishbone(xem)
-    counter = Counter(wb, 20000)
+    counter = Counter(wb, 1000)
 
+    # Configure the counter measurement
     channels = {
         1: list(range(1, 4)),
         0: [6, 7],
         2: -5,
         3: [-8, 8]
     }
-
     counter.set_lut_channels(channels)
-    print(counter.get_lut_channels())
+    counter.set_window_size(window_size=3e9)  # one milli second
+
+    counter.start_measurement()
+
+    while True:
+        plt.clf()
+        plt.plot(counter.read_data().T)
+        plt.pause(1)

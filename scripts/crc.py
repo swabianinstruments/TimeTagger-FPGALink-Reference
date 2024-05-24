@@ -147,7 +147,7 @@ def verilogCRC(moduleName, crcMat):
             output wire [{state_bit}-1:0] state_out
         );
 
-            wire [{state_bit+input_bit}-1:0] mul_input;
+            wire [{state_bit + input_bit}-1:0] mul_input;
             {mul_input_assignments}
 
             {state_out_assignments}
