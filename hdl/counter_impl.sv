@@ -1,5 +1,5 @@
 /*
- * countrate
+ * counter implementation
  *
  * This file is part of the Time Tagger software defined digital data
  * acquisition FPGA-link reference design.
@@ -22,7 +22,7 @@
 // verilog_format: on
 
 
-module countrate #(
+module counter_impl #(
     parameter TAG_WIDTH = 64,
     parameter NUM_OF_TAGS = 4,
     parameter TOT_TAGS_WIDTH = NUM_OF_TAGS * TAG_WIDTH,
@@ -65,8 +65,8 @@ module countrate #(
     //Each lane represents the count of detected tags in its respective channel.
     output wire [COUNTER_WIDTH - 1 : 0] count_data[NUM_OF_CHANNELS],
 
-    /* The countrate_wrapper module is tasked with receiving data when
-    count_valid is asserted. Within the countrate_wrapper module, it is
+    /* The counter module is tasked with receiving data when
+    count_valid is asserted. Within the counter module, it is
     essential to employ dedicated async FIFOs to store the outputs if the
     data is read by PC. If data is read by downstream module inside FPGA,
     it's responsible to rerceive the data whenever the count_valid signal is

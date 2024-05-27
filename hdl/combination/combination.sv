@@ -56,7 +56,7 @@ Please keep it in mind that restart might take time.
 4. After some time for the measurements,set start_reading to 1 and reset it again. A reading will be initiated with the rising edge on this signal, 
 */
 
-module combination_wrapper #(
+module combination #(
     parameter WISHBONE_INTERFACE_EN = 0,
     parameter HISTOGRAM_EN          = 1,
     parameter NUM_OF_CHANNELS       = 16,

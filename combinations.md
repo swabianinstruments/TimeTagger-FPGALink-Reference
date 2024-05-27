@@ -7,13 +7,13 @@ The user can access either the identified combinations or their corresponding ca
 The Combinations module can be controlled and accessed by a PC using USB 3.0 or by another module in the FPGA (standalone) as following. However, only one mode can be operational at a time, requiring a new bitfile to switch between modes.
 A Python class [`combinations.py`](./host/combinations.py) is provided for the PC based usage. If analyzing the combinations data on the PC is required, it is recommended to make use of the Python class provided, with more details to follow in the upcoming sections.
 
-For further information on how to interface with the module, please refer to the detailed information provided inside the [`combination_wrapper.sv`](./hdl/combination/combination_wrapper.sv).
+For further information on how to interface with the module, please refer to the detailed information provided inside the [`combination.sv`](./hdl/combination/combination.sv).
 
 The following sections will guide you through interacting with the FPGA Combinations module using the dedicated class.
 
 ## Bitfile generation
 
-Setting `WISHBONE_INTERFACE_EN` in the RTL design [`combination_wrapper.sv`](./hdl/combination/combination_wrapper.sv) will generate the PC-based mode, while resetting it will produce the standalone mode. Since this python class interacts via USB, please ensure that your bitfile is generated with `WISHBONE_INTERFACE_EN = 1`. The bitfiles in the git repository are generated in this mode.
+Setting `WISHBONE_INTERFACE_EN` in the RTL design [`combination.sv`](./hdl/combination/combination.sv) will generate the PC-based mode, while resetting it will produce the standalone mode. Since this python class interacts via USB, please ensure that your bitfile is generated with `WISHBONE_INTERFACE_EN = 1`. The bitfiles in the git repository are generated in this mode.
 
 ## Initialization
 

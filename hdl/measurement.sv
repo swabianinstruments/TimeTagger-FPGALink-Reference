@@ -68,18 +68,18 @@ module measurement (
     // -------------------- Histogram -------------------- //
     // --------------------------------------------------- //
 
-    histogram_wrapper #(
+    histogram #(
         .WISHBONE_INTERFACE_EN(1),
         .CHANNEL_WIDTH(m_axis_histogram.CHANNEL_WIDTH),
         .SHIFT_WIDTH($clog2(m_axis_histogram.TIME_WIDTH))
-    ) histogram_wrapper_inst (
+    ) histogram_inst (
         .s_axis(m_axis_histogram),
 
         .wb(wb_histogram),
 
         /*If you intend to process histogram data within the FPGA, set "WISHBONE_INTERFACE_EN"
            to zero. Utilize the signals below to interface with this module. Refer to the
-           "histogram_wrapper" and "histogram" modules for guidance on transmitting
+           "histogram" and "histogram_inner" modules for guidance on transmitting
            configuration data and receiving output data.*/
         .hist_read_start_i(),
         .hist_reset_i(),
@@ -100,11 +100,11 @@ module measurement (
     // --------------------------------------------------- //
     /* This module is designed to measure the number of tags received in each
      channel continuously. */
-    counter_wrapper #(
+    counter #(
         .WISHBONE_INTERFACE_EN(1),
         .WINDOW_WIDTH(m_axis_counter.TIME_WIDTH),
         .CHANNEL_WIDTH(m_axis_counter.CHANNEL_WIDTH)
-    ) counter_wrapper_inst (
+    ) counter_inst (
         .s_axis(m_axis_counter),
 
         .wb(wb_counter),
@@ -145,13 +145,13 @@ module measurement (
     assign m_comb_i.lut_addr = 0;
     assign m_comb_i.lut_dat_i = 0;
 
-    combination_wrapper #(
+    combination #(
         .WISHBONE_INTERFACE_EN(1),
         .HISTOGRAM_EN(1),
         .NUM_OF_CHANNELS(NUM_OF_CHANNELS),
         .ACC_WIDTH(ACC_WIDTH),
         .FIFO_DEPTH(COMB_FIFO_DEPTH)
-    ) combination_wrapper_inst (
+    ) combination_inst (
         // input information of channel
         .s_time(m_axis_combination),
 
