@@ -55,6 +55,7 @@ module sfpp1_eth_10g_axis (
     // Wishbone interface for control & status
     wb_interface.slave wb
 );
+
     // ---------- GTWIZARD GTH INSTANTIATION ----------
 
     // Transceiver status & control signals
@@ -237,12 +238,12 @@ module sfpp1_eth_10g_axis (
     // PHY status signals:
     // - 00h: RX Block Lock
     // - 01h: RX High BER
-    logic [15:0] phy_status = 0;
+    logic [1:0] phy_status;
 
     // PHY control signals:
     // - 00h: XGMII loopback mode
-    reg   [ 0:0] phy_control;
-    reg   [ 0:0] phy_control_tx_clk;
+    reg   [0:0] phy_control;
+    reg   [0:0] phy_control_tx_clk;
 
     // XGMII interface
     wire xgmii_tx_clk, xgmii_tx_rst;

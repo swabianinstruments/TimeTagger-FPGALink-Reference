@@ -52,6 +52,7 @@ module si_header_parser (
     assign m_axis.tdata = s_axis.tdata;
     assign m_axis.tkeep = s_axis.tkeep;
     assign m_axis.tlast = s_axis.tlast;
+    assign m_axis.tuser = 0;
 
     reg [1:0] packet_word_counter;  // Count the first few words of the header
 

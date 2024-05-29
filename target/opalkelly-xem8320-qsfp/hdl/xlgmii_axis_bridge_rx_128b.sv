@@ -34,6 +34,8 @@ module xlgmii_axis_bridge_rx_128b (
     output reg error_xgmii
 );
 
+    assign axis.tuser = 0;
+
     initial begin
         if (axis.DATA_WIDTH != 128) begin
             $error("Error: axis.DATA_WIDTH needs to be 128 bits");

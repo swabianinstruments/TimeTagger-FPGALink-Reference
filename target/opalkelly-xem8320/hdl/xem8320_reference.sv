@@ -24,7 +24,6 @@
  `default_nettype none
 // verilog_format: on
 
-`include "../../../hdl/ref_design_pkg.sv"
 import pkg_base_address::*;
 
 module xem8320_reference #(
@@ -327,6 +326,7 @@ module xem8320_reference #(
     assign eth_axis_tx.tdata  = 0;
     assign eth_axis_tx.tkeep  = 0;
     assign eth_axis_tx.tlast  = 0;
+    assign eth_axis_tx.tuser  = 0;
 
     // Transceiver + PHY
     sfpp1_eth_10g_axis sfpp1_eth_10g_axis_inst (
@@ -362,6 +362,7 @@ module xem8320_reference #(
         .clk(sys_clk),
         .rst(sys_clk_rst)
     );
+    assign sync_rx_data.tuser = 0;
 
     // this block is used for synchronization and width adaptation.
     axis_async_fifo_adapter #(
