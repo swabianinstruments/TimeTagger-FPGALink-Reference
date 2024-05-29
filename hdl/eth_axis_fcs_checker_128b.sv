@@ -43,6 +43,7 @@ module eth_axis_fcs_checker_128b (
     end
 
     assign m_axis.tkeep = {(m_axis.KEEP_WIDTH) {1'b1}};
+    assign m_axis.tuser = 0;
 
     localparam [31:0] initial_fcs_state = 32'hFFFFFFFF;
     reg  [31:0] fcs_state;

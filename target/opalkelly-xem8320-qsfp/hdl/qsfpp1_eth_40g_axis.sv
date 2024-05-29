@@ -69,29 +69,7 @@ module qsfpp1_eth_40g_axis (
 
     reg [31:0] phy_control;
 
-    // STATUS:
-    // - 00h: Transceiver Power Good 0
-    // - 01h: Transceiver Power Good 1
-    // - 02h: Transceiver Power Good 2
-    // - 03h: Transceiver Power Good 3
-    // - 04h: RX Block Lock 0
-    // - 05h: RX Block Lock 1
-    // - 06h: RX Block Lock 2
-    // - 07h: RX Block Lock 3
-    // - 08h: QPLL0 Reset
-    // - 09h: QPLL1 Reset
-    // - 0Ah: QPLL0 Lock
-    // - 0Bh: QPLL1 Lock
-    // - 0Ch: TX Core reset
-    // - 0Dh: RX Core reset
-    // - 0Eh: All Reset
-    // - 0Fh: TX Reset
-    // - 10h: RX Reset
-    // - 11h: Rx serdes reset
-    // - 12h: TX Reset done
-    // - 13h: RX Reset done
-    // - 13h: RX Reset done
-    logic [31:0] phy_status = 0;
+    logic [10:0] phy_status;
 
     // PHY loopback control (wired up to PHY loopback control directly)
     reg [11:0] phy_loopback_control;
@@ -155,6 +133,8 @@ module qsfpp1_eth_40g_axis (
         .src_rst (user_rx_reset)
     );
 
+    wire  tx_reset;
+    logic rx_reset;
     assign axis_tx_clk = xlgmii_tx_clk;
     assign axis_tx_rst = tx_reset | xlgmii_tx_rst;
     assign axis_rx_clk = xlgmii_rx_clk;
@@ -245,7 +225,6 @@ module qsfpp1_eth_40g_axis (
         .src_in(phy_control)
     );
 
-    wire tx_reset;
     xpm_cdc_array_single #(
         .DEST_SYNC_FF(4),
         .INIT_SYNC_FF(0),
@@ -260,7 +239,6 @@ module qsfpp1_eth_40g_axis (
         .src_in(freerun_rst | reset_tx_datapath | phy_control_freerun_clk[1])
     );
 
-    logic rx_reset;
     xpm_cdc_array_single #(
         .DEST_SYNC_FF(4),
         .INIT_SYNC_FF(0),
@@ -340,15 +318,15 @@ module qsfpp1_eth_40g_axis (
         .ctl_rx_test_pattern_0(phy_control_rx_clk[6]),
 
         // RX_0 Stats Signals
-        .stat_rx_misaligned_0(phy_status[29]),
-        .stat_rx_bip_err_0_0(phy_status[24]),
-        .stat_rx_bip_err_1_0(phy_status[25]),
-        .stat_rx_bip_err_2_0(phy_status[26]),
-        .stat_rx_bip_err_3_0(phy_status[27]),
+        .stat_rx_misaligned_0(phy_status[4]),
+        .stat_rx_bip_err_0_0(phy_status[5]),
+        .stat_rx_bip_err_1_0(phy_status[6]),
+        .stat_rx_bip_err_2_0(phy_status[7]),
+        .stat_rx_bip_err_3_0(phy_status[8]),
         .stat_rx_aligned_0(rx_aligned),
-        .stat_rx_hi_ber_0(phy_status[22]),
+        .stat_rx_hi_ber_0(phy_status[9]),
         .stat_rx_status_0(rx_status),
-        .stat_rx_local_fault_0(phy_status[23]),
+        .stat_rx_local_fault_0(phy_status[10]),
 
         // TX_0 Signals
         .tx_reset_0(tx_reset),

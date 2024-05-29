@@ -40,6 +40,8 @@ module xgmii_axis_bridge_rx_64b (
     output reg error_xgmii
 );
 
+    assign axis.tuser = 0;
+
     initial begin
         if (axis.DATA_WIDTH != 64) begin
             $error("Error: axis.DATA_WIDTH needs to be 64 bits");

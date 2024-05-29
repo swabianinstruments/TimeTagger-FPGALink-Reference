@@ -95,7 +95,7 @@ module user_sample (
             end else begin
                 led[4] <= 0;
             end
-            led[3:2] = tag_counter[15:14];
+            led[3:2] <= tag_counter[15:14];
         end
     end
 

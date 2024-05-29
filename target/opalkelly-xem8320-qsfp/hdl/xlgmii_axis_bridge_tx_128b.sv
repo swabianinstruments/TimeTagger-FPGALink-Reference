@@ -115,7 +115,8 @@ module xlgmii_axis_bridge_tx_128b (
     // clock cycle. Otherwise, simply equal to tdata and tkeep.
     reg adjusted_tvalid, adjusted_tlast;
     reg [127:0] adjusted_tdata;
-    reg [ 15:0] adjusted_tkeep;
+    reg [15:0] adjusted_tkeep;
+    reg fsm_mask_ready;
 
     always @(*) begin
         // Defaults:
@@ -172,11 +173,11 @@ module xlgmii_axis_bridge_tx_128b (
     reg fsm_state_reg, fsm_state_next;
 
     reg fsm_end_transmission, fsm_end_transmission_next;
-    reg fsm_mask_ready, fsm_mask_ready_next;
+    reg fsm_mask_ready_next;
 
     // Initial values for simulation
     reg [127:0] xgmii_data_next = {16{XGMII_IDLE}};
-    reg [ 15:0] xgmii_ctrl_next = 16'hFFFF;
+    reg [15:0] xgmii_ctrl_next = 16'hFFFF;
 
 
     always @(posedge axis.clk) begin

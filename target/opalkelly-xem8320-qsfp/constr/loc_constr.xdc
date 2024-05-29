@@ -21,8 +21,6 @@ set_property PACKAGE_PIN AC4 [get_ports {qsfpp1_tx_n[3]}]
 set_property PACKAGE_PIN AB6 [get_ports qsfpp1_mgtrefclk_n]
 set_property PACKAGE_PIN AB7 [get_ports qsfpp1_mgtrefclk_p]
 
-create_clock -period 6.400 -name qsfpp1_mgtrefclk [get_ports qsfpp1_mgtrefclk_p]
-
 ############################################################################
 # QSFP Port E logic
 set_property IOSTANDARD LVCMOS33 [get_ports qsfpp1_i2c_sda]

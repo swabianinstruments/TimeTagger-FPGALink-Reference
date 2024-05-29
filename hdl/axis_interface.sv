@@ -32,9 +32,9 @@ interface axis_interface #(
     logic                      tvalid;
     logic [  DATA_WIDTH - 1:0] tdata;
     logic [  KEEP_WIDTH - 1:0] tkeep;
-    logic [USER_WIDTH - 1 : 0] tuser = 0;
+    logic [USER_WIDTH - 1 : 0] tuser;
     logic                      tlast;
-    logic                      tready = 0;
+    logic                      tready;
 
     modport master(input clk, rst, tready, output tvalid, tdata, tkeep, tlast, tuser);
     modport slave(input clk, rst, tvalid, tdata, tkeep, tlast, tuser, output tready);
