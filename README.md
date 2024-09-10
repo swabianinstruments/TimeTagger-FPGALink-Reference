@@ -57,6 +57,10 @@ All measurements can be simulated with a nearly realistic dataset:
 
 For a simpler demonstration of how to utilize the simulation toolbox, please refer to [`tb_user_sample.sv`](./tb/tb_user_sample.sv).
 
+## Latency
+
+Link latency is defined as the delay from the input channel of the Time Tagger X to the output of the `tag_converter` module within the reference design, where tags are converted into timestamps for customer use. This latency depends on factors such as data rate and Time Tagger X configuration, and can range from 1 µs to 12 µs.
+
 ## Getting started
 
 First up, clone the reference design repository:
