@@ -24,9 +24,9 @@ Two types of results can be expected from combinations, Stream of combinations a
 If stream of combinations is required, readout speed should exceed the combinations
 throughput, otherwise an overflow will happen in the FIFO. In histogram mode, for any combination,
 a 32 bits counter is stored in BRAM with depth of BRAM in 2**channels, where channels is the number of 
-virtual channels(NUM_OF_CHANNELS in channel_selector). Due to memory restrictions in FPGA,up to 16 channels
-are supported with 32 bits for combination's counter, while user has capability to customize number of virtual channels
- and width of combination counter.
+virtual channels(NUM_OF_CHANNELS in channel_selector). Due to memory restrictions in FPGA, up to 16 channels
+are supported with 32 bits for combination's counter, while the number of virtual channels
+ and width of combination counter can be customized by users.
  
 Also, there are two ways to configure this module and receive data from it:
 

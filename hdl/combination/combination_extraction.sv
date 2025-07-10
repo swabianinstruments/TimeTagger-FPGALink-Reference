@@ -127,7 +127,7 @@ module combination_extraction #(
 
     ///// This part is only for debugging and reporting to the user
     // number of received time tags
-    //number of unsorted time tag
+    // number of unsorted time tag
     logic [63:0] cnt_timeTag;
     logic [31:0] cnt_timeDiff;
 

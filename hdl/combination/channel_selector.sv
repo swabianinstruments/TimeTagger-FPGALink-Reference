@@ -14,9 +14,12 @@
  */
 
 /*
-This module is selecting and mapping the input channels to to the existing processing channel. For example, there are channels 1-18, but combination module accepts only 16 channels.
-Also, channel signed indexes(rising,falling edge) are converted to unsigned. It means user can select one rising,falling, both and none! All the decisions are made in software and this module will only apply
-it via look up table
+This module maps the input channels to to the existing
+processing channel. Usually the input channels can range from -18-1 and 1-18,
+which this module looks up in the `LUT` look up table and maps to one of our 16
+virtual channels.
+
+The look up table can be set freely by the user/host during runtime.
 */
 
 // verilog_format: off
@@ -29,7 +32,8 @@ module channel_selector #(
     parameter WIDTH = 64,
     parameter LANE = 4,
     parameter CHANNEL_INP_WIDTH = 6,
-    // unsigned output, to eliminate positive(rising) and negative(falling) of channels
+    // unsigned output, to eliminate the distinction between positive (rising)
+    // and negative (falling) channels
     parameter CHANNEL_OUTP_WIDTH = 4
 ) (
     input wire clk,
@@ -52,13 +56,14 @@ module channel_selector #(
     output reg lut_ack,
     input wire [1:0] lut_WrRd,  // 2'b10: writing, 2'b01: reading
     input wire [CHANNEL_INP_WIDTH-1:0] lut_addr,
-    input  wire [CHANNEL_OUTP_WIDTH :0]  lut_dat_i,// (CHANNEL_OUTP_WIDTH-1) bits for stored channel index and one bit for storing valid
-    output reg [CHANNEL_OUTP_WIDTH : 0] lut_dat_o
+    input  wire [CHANNEL_OUTP_WIDTH:0]  lut_dat_i,// (CHANNEL_OUTP_WIDTH-1) bits for stored channel index and one bit for storing valid
+    output reg [CHANNEL_OUTP_WIDTH:0] lut_dat_o
 );
 
     logic [CHANNEL_OUTP_WIDTH:0] LUT[2**CHANNEL_INP_WIDTH];
     logic [CHANNEL_INP_WIDTH-1:0] lut_addr_rst;
-    always_ff @(posedge clk) begin  //// storing the look up table received from PC
+    // Interface to set/read the look up table (from the host via WB)
+    always_ff @(posedge clk) begin
         lut_ack         <= 0;
         lut_dat_o       <= 'X;
         lut_addr_rst    <= 0;

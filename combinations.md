@@ -62,7 +62,7 @@ The `set_lut_channels` method allows you to define how the Combinations module c
 ...    5: 12                   # Use channel 12 from Time Tagger X directly
 ... }
 
->>> combinations.set_channel_selector(channels)
+>>> combinations.set_lut_channels(channels)
 >>> print(combinations.get_lut_channels())  # Verify the configuration
 ```
 
@@ -70,7 +70,7 @@ In this configuration, channel inputs 1 to 4 from the Time Tagger X are combined
 
 #### Default Configuration
 
-If you don't provide any configuration (`combinations.set_channel_selector()`), channels 1 to 16 from the Time Tagger X are automatically mapped to virtual channels 0 to 15 in the Combinations module.
+If you don't provide any configuration (`combinations.set_lut_channels()`), channels 1 to 16 from the Time Tagger X are automatically mapped to virtual channels 0 to 15 in the Combinations module.
 
 ### Configuring Window, Filter, and Readout Mode
 
@@ -90,23 +90,23 @@ The next step involves selecting whether the intended data source is a histogram
 
 ## Capture Enable
 
-To proceed, activate the `capture_enable` by invoking the `set_capture_enable` method. Setting it to **zero** will deactivate the capture, while any other value will result in the processing of received time tags.
+To proceed, activate the `capture_enable` by invoking the `set_capture_enable` method with `True`. You can disable it again by calling it with `False`.
 
 ``` sh
->>> combinations.set_capture_enable("True")
+>>> combinations.set_capture_enable(True)
 ```
 
 ## Reading Combinations
 
-Start reading from the Combinations module by passing `"True"` to `read_data` method as following.
+Start reading from the Combinations module by calling the `read_data` method. The method returns a numpy array containing histogram information in histogram mode or the combinations themselves otherwise.
 
 ``` sh
->>> combinations.read_data("True")
+>>> combinations.read_data()
 ```
 
 ## Resetting FPGA Combinations module
 
-A reset method`reset_FPGA_module` is available for users who wish to reset the entire Combinations module. When triggered, all processed combinations will be reset.
+A `reset_FPGA_module` is available for users who wish to reset the entire Combinations module. When triggered, all processed combinations as well as the configuration will be reset.
 
 ``` sh
 >>> combination.reset_FPGA_module()

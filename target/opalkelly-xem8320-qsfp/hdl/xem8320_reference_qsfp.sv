@@ -44,7 +44,9 @@ module xem8320_reference_qsfp #(
     output wire [ 2:0] okHU,
     inout  wire [31:0] okUHU,
     inout  wire        okAA,
-    input  wire        reset,
+    // NOTE: This pin was previously `reset`. Opal Kelly inverted the behaviour
+    // of this pin with firmware version 1.56.
+    input  wire        board_ready,
 
     // QSFP+ Port 1 Reference Clock
     input wire qsfpp1_mgtrefclk_p,
@@ -124,7 +126,7 @@ module xem8320_reference_qsfp #(
     ) xpm_cdc_sync_rst_inst (
         .dest_rst(okRst),
         .dest_clk(okClk),
-        .src_rst (reset)
+        .src_rst (!board_ready)
     );
 
     // --------------------------------------------------- //
