@@ -34,7 +34,7 @@ module combination_accumulator #(
 
     input wire data_in_vd,
     input wire [COMB_WIDTH-1 : 0] data_in,
-    input wire [WIDTH_CNT-1   : 0] data_cnt_in,//pre-calculated to eliminate similar combination during accumulation(pipeline)
+    input wire [WIDTH_CNT-1  : 0] data_cnt_in, //pre-calculated to eliminate similar combination during accumulation (pipeline)
     input wire reset_comb,
     input wire ready_i,
     input wire start_reading,
@@ -42,12 +42,12 @@ module combination_accumulator #(
     output reg reset_comb_done,
     output wire comb_out_vd,
     output wire [COMB_WIDTH-1 : 0] comb_value,
-    output wire [ACC_WIDTH-1 : 0] comb_count
+    output wire [ACC_WIDTH-1  : 0] comb_count
 );
 
     localparam RAM_DEPTH = 2 ** COMB_WIDTH;
     localparam N_pipe = 8;  // buffering data to prevent conflict/overwriting during reading out the results
-    ///////////////////////   Memory signal difinations ////////////////////////////// 
+    ///////////////////////   Memory signal definitions //////////////////////////////
     logic [COMB_WIDTH-1:0] addra;  // Write address bus, width determined from RAM_DEPTH
     logic [COMB_WIDTH-1:0] addrb;  // Read address bus, width determined from RAM_DEPTH
 
@@ -61,7 +61,7 @@ module combination_accumulator #(
     logic [ACC_WIDTH-1:0] doutb_reg;
     (* cascade_height=2 *) logic [ACC_WIDTH-1:0] ram_combination[RAM_DEPTH-1:0] = '{default: '0};
     logic [ACC_WIDTH-1:0] ram_data = '0;
-    ///////////////////////   accumulate signal difinations //////////////////////////////
+    ///////////////////////   accumulate signal definations //////////////////////////////
     logic [WIDTH_CNT-1:0] cnt_line_buff[N_pipe-1:0];
     logic [N_pipe:0] data_in_vd_buff;
     logic [COMB_WIDTH-1:0] data_in_buff[N_pipe-1:0];
@@ -69,7 +69,7 @@ module combination_accumulator #(
     // read out control signal 
     logic reading_out_busy_ff;
 
-    logic start_reading_d1;  //      this is to detec rising edge of start reading, Any rising_edge will initiate a readout process
+    logic start_reading_d1;  // Delays start_reading to detect a rising edge and initiate the readout phase
     logic read_out_blocking;
 
     logic enb_buff[1:0];
@@ -105,7 +105,7 @@ module combination_accumulator #(
             start_reading_d1          <= start_reading;
             //reading out from portB
 
-            if (start_reading && ~start_reading_d1) begin  // starting the readout phase, rising edge of start
+            if (start_reading && ~start_reading_d1) begin  // starting the readout phase, rising edge of start_reading
                 reading_out_busy_ff <= 1;
                 addr_rd_next        <= '0;
             end
@@ -114,7 +114,7 @@ module combination_accumulator #(
             if (data_in_vd_buff[4]) begin  //// reading out from portB
                 enb   <= 1;
                 addrb <= data_in_buff[4];
-            end else if(reading_out_busy_ff && ready_i && !read_out_blocking )begin   // reading out from the memory cell by cell based on reading request(reading_out_en)
+            end else if (reading_out_busy_ff && ready_i && !read_out_blocking) begin   // reading out from the memory cell by cell based on reading request (reading_out_en)
                 enb          <= 1;
                 addrb        <= addr_rd_next;
                 addr_rd_next <= addr_rd_next + 1;
@@ -136,7 +136,7 @@ module combination_accumulator #(
                 wea   <= 1;
                 addra <= data_in_buff[7];
                 dina  <= doutb_reg + cnt_line_buff[7];
-            end else if(reading_out_busy_buff[0] && ~data_in_vd_buff[5])begin  // resetting the memory content for next round of accumulation(histogram)
+            end else if (reading_out_busy_buff[0] && ~data_in_vd_buff[5]) begin  // reset the memory content for next round of accumulation (histogram)
                 wea   <= enb;
                 addra <= addrb;
                 dina  <= 0;
@@ -149,7 +149,7 @@ module combination_accumulator #(
         if (rst) begin
             doutb_reg <= '0;
         end else begin
-            doutb_reg <= ram_data;  // registering the output to increase the frequency
+            doutb_reg <= ram_data;  // register the output to increase the frequency
         end
         if (wea) begin
             ram_combination[addra] <= dina;

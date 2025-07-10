@@ -77,7 +77,7 @@ si@ubuntu:target/opalkelly-xem8320-qsfp$ pushd host
 si@ubuntu:target/opalkelly-xem8320-qsfp/host$ python -m device_settings configure
 Connected to device Opal Kelly XEM8320 with serial 0123456789!
          Product: XEM8320-AU25P
-Firmware version: 1.39
+Firmware version: 1.56
    Serial Number: 0123456789
        Device ID: Opal Kelly XEM8320
 Setting XEM8320_SMARTVIO_MODE to 0x01
@@ -86,6 +86,12 @@ Setting XEM8320_VIO2_VOLTAGE to 330
 Saved settings.
 si@ubuntu:target/opalkelly-xem8320-qsfp/host$ popd
 ```
+
+*Ensure your firmware version is >= 1.56*
+
+OpalKelly inverted the behaviour of the `reset` pin to instead be a
+`board_ready` signal, so the bitstream will stay in reset for older firmware
+versions.
 
 These settings are only applied after a power-cycle of the XEM8320-board.
 

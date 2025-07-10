@@ -71,19 +71,22 @@ def main():
     # Print some information about the device
     print(f"Connected to device {xem.GetDeviceID()} with serial "
           + f"{xem.GetSerialNumber()}!")
+    devInfo = ok.okTDeviceInfo()
+    if xem.NoError != xem.GetDeviceInfo(devInfo):
+        print("Unable to retrieve device information.")
+        exit(-1)
+    print("         Product: " + devInfo.productName)
+    print(
+        "Firmware version: %d.%d" % (devInfo.deviceMajorVersion, devInfo.deviceMinorVersion)
+    )
+    print("   Serial Number: %s" % devInfo.serialNumber)
+    print("       Device ID: %s" % devInfo.deviceID)
+    if (devInfo.deviceMajorVersion == 1) and (devInfo.deviceMinorVersion < 56):
+        print("Firmware outdated!")
+        print("Please update to firmware version >= 1.56 to ensure correct reset behaviour!")
+        exit(-1)
 
     if args.command == "configure":
-        devInfo = ok.okTDeviceInfo()
-        if xem.NoError != xem.GetDeviceInfo(devInfo):
-            print("Unable to retrieve device information.")
-            exit(-1)
-        print("         Product: " + devInfo.productName)
-        print(
-            "Firmware version: %d.%d" % (devInfo.deviceMajorVersion, devInfo.deviceMinorVersion)
-        )
-        print("   Serial Number: %s" % devInfo.serialNumber)
-        print("       Device ID: %s" % devInfo.deviceID)
-
         settings = ok.okCDeviceSettings()
 
         if xem.NoError != xem.GetDeviceSettings(settings):

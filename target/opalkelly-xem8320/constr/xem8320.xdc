@@ -106,7 +106,7 @@ set_property PACKAGE_PIN G22 [get_ports {led[5]}]
 set_property IOSTANDARD LVCMOS12 [get_ports {led[*]}]
 
 ############################################################################
-## User Reset
+## Board Ready
 ############################################################################
-set_property PACKAGE_PIN P19 [get_ports {reset}]
-set_property IOSTANDARD LVCMOS18 [get_ports {reset}]
+set_property PACKAGE_PIN P19 [get_ports {board_ready}]
+set_property IOSTANDARD LVCMOS18 [get_ports {board_ready}]

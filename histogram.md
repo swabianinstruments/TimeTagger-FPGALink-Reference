@@ -45,6 +45,10 @@ Configure the Histogram module by setting the `start_channel` and `click_channel
 
 Please note that the FPGA histogram has a size of 4096 with a bin resolution of 1/3 ps. The `shift` parameter is employed to scale the bin resolution by a factor of $2^{shift}$. For example, setting the shift parameter to 5 would result in a resolution of each bin being $\frac{32}{3}$ ps.
 
+NOTE:
+
+- The last bin count contains all events otherwise exceeding the FPGA histogram size.
+
 
 ## Reading Data
 

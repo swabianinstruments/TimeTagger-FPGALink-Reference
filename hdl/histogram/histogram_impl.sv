@@ -248,7 +248,7 @@ module histogram_impl #(
         // This signal is reset when we want to do a measurement with
         // different channels. In this case, reset_mem is asserted, and
         // this signal is deasserted. For continuous measurement, this signal
-        // is not deasserted. Therefore, after reading out the hisogram memory,
+        // is not deasserted. Therefore, after reading out the histogram memory,
         // it can be updated with the last start data.
         if (reset_mem) begin
             detected_start_data = 0;
