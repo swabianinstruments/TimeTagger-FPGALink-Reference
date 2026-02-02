@@ -1,4 +1,6 @@
-bitarray==2.5.1
-galois==0.3.6
-numpy
-typing_extensions==4.2.0
+bitarray==3.8.0
+galois==0.4.10
+llvmlite==0.46.0
+numba==0.63.1
+numpy==2.3.5
+typing_extensions==4.15.0
