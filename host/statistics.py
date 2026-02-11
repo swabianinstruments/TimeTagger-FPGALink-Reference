@@ -98,9 +98,11 @@ class Statistics:
         self.wb = wb
         self.offset = offset
 
-        module_name = self.__read_wb_addr(0).to_bytes(4, 'big')
-        assert module_name == b'stat', ("Connected to a module other than Statistics. "
-                                        "Ensure that you have connected the correct Wishbone interface to your Statistics module inside the FPGA project.")
+        module_name = self.__read_wb_addr(0).to_bytes(4, "big")
+        assert module_name == b"stat", (
+            "Connected to a module other than Statistics. "
+            "Ensure that you have connected the correct Wishbone interface to your Statistics module inside the FPGA project."
+        )
 
     def __read_wb_addr(self, addr):
         return self.wb.read(self.offset + addr)
@@ -136,6 +138,9 @@ class Statistics:
             output += f"  {d:20} {'(' + v['unit'] + ')':>27} " + f": {v['val']:16} \n"
         print(output)
 
+    def reset(self):
+        self.wb.write(self.offset + 8, 0xFFFFFFFF)
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -145,6 +150,7 @@ def main():
     parser.add_argument("--xem-serial", type=str)
     parser.add_argument("--xem-bitstream", type=str)
     parser.add_argument("--monitor", type=bool)
+    parser.add_argument("--reset-stats", type=bool)
 
     args = parser.parse_args()
 
@@ -210,9 +216,13 @@ def main():
     stat = Statistics(wb, 0b100000000000000001010001 << 8)
 
     stat.print_diagnostics()
+    if args.reset_stats:
+        stat.reset()
     if args.monitor:
         while True:
             stat.print_diagnostics()
+            if args.reset_stats:
+                stat.reset()
             time.sleep(0.5)
             print()
 
