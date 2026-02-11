@@ -124,37 +124,43 @@ Diagnostics:
 si@ubuntu:target/opalkelly-xem8320-qsfp/host$ popd
 ```
 
-You can also use `sfp.py` inside `../../host/` to observe the sfp state as follows:
+You can also use `qsfp.py` to observe the qsfp state as follows:
 
 ``` sh
 si@ubuntu:target/opalkelly-xem8320-qsfp$ pushd host
-si@ubuntu:target/opalkelly-xem8320-qsfp/host$ python3 -m common.sfp monitor --device xem_i2c
+si@ubuntu:target/opalkelly-xem8320-qsfp/host$ python3 -m qsfp monitor --device xem_i2c
 Connected to device Opal Kelly XEM8320 with serial 0123456789!
-Connected to the following SFP module:
+Connected to the following QSFP module:
 
-Vendor:  OEM
-OUI:  0x009065
-Rev:  A
-PN:  SFP-10G-LR
-SN:  01234567890
-DC:  012345
-Type:  SFPSFPP (0x03)
-Connector: LC (0x07)
-Bitrate: 10300 MBd
-Wavelength: 1310 nm
-          SM    OM1    OM1    OM3    OM4
-Max length:    10000 m    0 m    0 m    0 m    0 m
+Vendor:		OEM
+OUI:		0x000000
+Rev:		1A
+PN:		F24-HW-QSFP-40G-
+SN:		0123456789
+DC:		012345
+Type:		QSFPP (0x0d)
+Connector:	LC (0x07)
+Bitrate:	10300 MBd
+		        SM    OM1    OM2    OM3    Len
+Max length:	   10000 m    0 m    0 m    0 m    0 m
 
 
 Diagnostics:
                              VAL      +ER      +WR      -WR      -ER
-  temp         (degC) :   22.137   80.000   70.000   -5.000  -15.000
-  vcc             (V) :    3.253    3.630    3.465    3.135    2.970
-  tx_bias        (mA) :   24.000  110.000  100.000   10.000    5.000
-  tx_power       (mW) :    0.551    1.778    1.122    0.151    0.096
-  rx_power       (mW) :    0.000    1.778    1.122    0.036    0.023
-  laser_temp   (degC) :   -0.004    0.000    0.000    0.000    0.000
-  tec            (mA) :   -0.100    0.000    0.000    0.000    0.000
+  temp         (degC) :   19.211   85.000   80.000    0.000   -5.000
+  vcc             (V) :    3.277    3.600    3.500    3.000    2.900
+  rx_power[0]    (mW) :    0.000    1.995    1.585    0.071    0.056
+  rx_power[1]    (mW) :    0.000    1.995    1.585    0.071    0.056
+  rx_power[2]    (mW) :    0.000    1.995    1.585    0.071    0.056
+  rx_power[3]    (mW) :    0.000    1.995    1.585    0.071    0.056
+  tx_bias[0]     (mA) :   30.250   80.000   70.000    0.000    0.000
+  tx_bias[1]     (mA) :   29.500   80.000   70.000    0.000    0.000
+  tx_bias[2]     (mA) :   29.000   80.000   70.000    0.000    0.000
+  tx_bias[3]     (mA) :   30.250   80.000   70.000    0.000    0.000
+  tx_power[0]    (mW) :    0.701    1.778    1.585    0.200    0.178
+  tx_power[1]    (mW) :    0.710    1.778    1.585    0.200    0.178
+  tx_power[2]    (mW) :    0.733    1.778    1.585    0.200    0.178
+  tx_power[3]    (mW) :    0.652    1.778    1.585    0.200    0.178
 ```
 
 The on-board LEDs serve three functions: D1 and D2 represent the state of

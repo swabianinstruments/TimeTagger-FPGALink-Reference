@@ -24,8 +24,8 @@ class WBI2CReg(IntEnum):
     CTR = 2
     RXR = 3
     SR = 4
-    TXR = 5
-    CR = 6
+    TXR = 3
+    CR = 4
 
 
 class WishboneI2C(I2CInterface):
@@ -87,28 +87,42 @@ class WishboneI2C(I2CInterface):
         assert isinstance(rw, I2CRW)
 
         # Write the slave address to the RXR register
-        self.__write_wb(WBI2CReg.RXR, (addr << 1) | int(rw))
+        self.__write_wb(WBI2CReg.TXR, (addr << 1) | int(rw))
         # Issue the start condition
-        self.__write_wb(WBI2CReg.SR, 0x90)
+        self.__write_wb(WBI2CReg.CR, 0x90)
+        while self.__read_wb(WBI2CReg.SR) & (1 << 1) != 0:
+            pass
+
+        assert self.__read_wb(WBI2CReg.SR) & (1 << 7) == 0
 
     def write(self, val):
         # Send data to the device
-        self.__write_wb(WBI2CReg.RXR, val)
+        self.__write_wb(WBI2CReg.TXR, val)
         # Place the data on the bus
-        self.__write_wb(WBI2CReg.SR, 0x10)
+        self.__write_wb(WBI2CReg.CR, 0x10)
+        while self.__read_wb(WBI2CReg.SR) & (1 << 1) != 0:
+            pass
+
+        assert self.__read_wb(WBI2CReg.SR) & (1 << 7) == 0
 
     # TODO: does this have to be a composite function?
     def read_ack_stop(self):
-        self.__write_wb(WBI2CReg.SR, 0x68)
+        self.__write_wb(WBI2CReg.CR, 0x68)
+        while self.__read_wb(WBI2CReg.SR) & (1 << 1) != 0:
+            pass
+        return self.__read_wb(WBI2CReg.RXR)
+
+    def read_ack(self):
+        self.__write_wb(WBI2CReg.CR, 0x20)
+        while self.__read_wb(WBI2CReg.SR) & (1 << 1) != 0:
+            pass
         return self.__read_wb(WBI2CReg.RXR)
 
     def stop(self):
-        self.__write_wb(WBI2CReg.SR, 0x40)
+        self.__write_wb(WBI2CReg.CR, 0x40)
 
     def print_i2cwb_registers(self):
         print("PRER: 0x{:04x}".format(self.__read_prer()))
         print("CTR:  0x{:02x}".format(self.__read_wb(WBI2CReg.CTR)))
         print("RXR:  0x{:02x}".format(self.__read_wb(WBI2CReg.RXR)))
         print("SR:   0x{:02x}".format(self.__read_wb(WBI2CReg.SR)))
-        print("TXR:  0x{:02x}".format(self.__read_wb(WBI2CReg.TXR)))
-        print("CR:   0x{:02x}".format(self.__read_wb(WBI2CReg.CR)))
