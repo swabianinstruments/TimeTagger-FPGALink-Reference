@@ -41,6 +41,10 @@ class I2CInterface(ABC):
         pass
 
     @abstractmethod
+    def read_ack(self):
+        pass
+
+    @abstractmethod
     def stop(self):
         pass
 
@@ -96,10 +100,7 @@ class MockI2CBus(I2CInterface):
         self.curtxn_rw = rw
         self.curtxn_valid = True
 
-        responding_slaves = filter(
-            lambda s: s.has_addr(addr),
-            self.slaves
-        )
+        responding_slaves = filter(lambda s: s.has_addr(addr), self.slaves)
         self.curtxn_slaves = list(responding_slaves)
 
         for s in self.curtxn_slaves:
@@ -145,4 +146,20 @@ class MockI2CBus(I2CInterface):
             s.stop_cond()
 
         self.curtxn_valid = False
+        return val
+
+    def read_ack(self):
+        # Perform some basic sanity checks
+        I2CInterface.read_ack(self)
+
+        # We need some valid transaction to read
+        if not self.curtxn_valid:
+            raise RuntimeError("I2C read attempted without valid transaction")
+
+        # But the slave may no longer be attached
+        val = 0xFF
+        for s in self.curtxn_slaves:
+            val &= s.produce()
+            s.ack()
+
         return val

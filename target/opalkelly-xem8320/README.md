@@ -133,11 +133,11 @@ Diagnostics:
 si@ubuntu:target/opalkelly-xem8320/host$ popd
 ```
 
-You can also use `sfp.py` inside `../../host/` to observe the sfp state as follows:
+You can also use `sfp.py` to observe the sfp state as follows:
 
 ``` sh
 si@ubuntu:target/opalkelly-xem8320$ pushd host
-si@ubuntu:target/opalkelly-xem8320/host$ python3 -m common.sfp monitor --device xem_i2c
+si@ubuntu:target/opalkelly-xem8320/host$ python3 -m sfp monitor --device xem_i2c
 Connected to device Opal Kelly XEM8320 with serial 0123456789!
 Connected to the following SFP module:
 

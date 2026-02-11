@@ -22,9 +22,9 @@ import textwrap
 
 import ok
 
-from .i2c import I2CRW, MockI2CBus, MockI2CSlave, I2CInterface
-from .ok_wishbone import Wishbone
-from .xem_i2c import WishboneI2C
+from common.i2c import I2CRW, MockI2CBus, MockI2CSlave, I2CInterface
+from common.ok_wishbone import Wishbone
+from common.xem_i2c import WishboneI2C
 
 
 class SFPType(IntEnum):
